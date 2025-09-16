@@ -1,0 +1,20 @@
+// REASON: This file defines the GitHub Action that validates PR titles.
+name: Lint Commit Messages
+
+on: 
+  // REASON: This workflow triggers on every pull request event (creation, update).
+  pull_request:
+
+jobs:
+  commitlint:
+    // REASON: Defines the name of the job. We will need this name for branch protection rules.
+    name: Check PR Title
+    runs-on: ubuntu-latest
+    steps:
+      // REASON: This step checks out the code so the action can access it.
+      // fetch-depth: 0 is required to check all commits in the PR.
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      // REASON: This is a popular community action that runs commitlint.
+      - uses: wagoid/commitlint-github-action@v5

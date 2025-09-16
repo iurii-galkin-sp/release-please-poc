@@ -1,0 +1,15 @@
+{
+  "extends": ["@commitlint/config-conventional"],
+  "rules": {
+    "scope-enum": [
+      2,
+      "always",
+      [
+        "api",
+        "database",
+        "project"
+      ]
+    ],
+    "header-max-length": [2, "always", 72]
+  }
+}

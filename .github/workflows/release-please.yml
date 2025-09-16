@@ -1,0 +1,21 @@
+// REASON: This file defines the GitHub Action that automates release creation.
+name: Release Please
+
+on:
+  // REASON: This workflow triggers ONLY when a push is made to the 'main' branch.
+  push:
+    branches:
+      - main
+
+jobs:
+  release-please:
+    // REASON: Defines the name of the job that will appear in the GitHub UI.
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      // REASON: This is the official Google action for release-please.
+      - uses: google-github-actions/release-please-action@v3
+        with:
+          // REASON: Tells the action to look for a manifest file to handle multiple components.
+          config-file: .release-please-manifest.json
+          manifest-file: .release-please-manifest.json
