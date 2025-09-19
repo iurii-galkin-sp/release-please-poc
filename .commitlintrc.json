@@ -1,9 +1,7 @@
 {
-  "_comment1": "REASON: This file configures the rules for commitlint.",
-  "_comment2": "REASON: We inherit the standard set of rules for Conventional Commits.",
   "extends": ["@commitlint/config-conventional"],
   "rules": {
-    "_comment3": "REASON: This rule enforces that the 'scope' of a commit (e.g., feat(api)) must be one of the values in this list. It protects from typos.",
+    "body-leading-blank": [2, "always"],
     "scope-enum": [
       2,
       "always",
@@ -12,10 +10,9 @@
         "activity",
         "payment",
         "activity-schema",
-        "payment-schema"       
+        "payment-schema"
       ]
     ],
-    "_comment4": "REASON: This rule ensures commit headers are concise and readable in the Git log.",
     "header-max-length": [2, "always", 72]
   }
 }
