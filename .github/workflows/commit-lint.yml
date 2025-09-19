@@ -16,5 +16,19 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      // REASON: The linter tool (commitlint) is a Node.js program. 
+      // This step installs the Node.js environment required to run it and its dependencies.
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # You can change this to a newer version if needed
+
+      // REASON: Installs the linter and its configuration from package.json.
+      // 'npm ci' is used as it's faster and more reliable for automated environments than 'npm install'.
+      - name: Install dependencies
+        run: npm ci
+
       // REASON: This is a popular community action that runs commitlint.
+      // It will now succeed because the necessary tools are installed in the previous steps.
       - uses: wagoid/commitlint-github-action@v5

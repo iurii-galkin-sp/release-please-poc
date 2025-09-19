@@ -12,6 +12,9 @@ jobs:
     // REASON: Defines the name of the job that will appear in the GitHub UI.
     name: Create Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       // REASON: This is the official Google action for release-please.
       - uses: google-github-actions/release-please-action@v3
