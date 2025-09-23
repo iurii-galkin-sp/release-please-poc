@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: 'Run Release Please to create releases'
         id: release
-        uses: google-github-actions/release-please-action@v4
+        uses: googleapis/release-please-action@v4
         with:
           command: github-release
           config-file: release-please-config.json
