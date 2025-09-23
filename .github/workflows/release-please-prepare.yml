@@ -1,0 +1,26 @@
+# REASON: This workflow implements the "preparation" stage of our release process.
+# It runs on every push to 'dev' to create or update a Release Pull Request.
+name: '1. Release Please - Prepare'
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please-pr:
+    name: 'Create/Update Release PR'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Run Release Please to prepare a Release PR'
+        uses: google-github-actions/release-please-action@v4
+        with:
+          command: release-pr
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+        
