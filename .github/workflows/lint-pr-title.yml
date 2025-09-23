@@ -19,10 +19,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Check PR title against Conventional Commits'
-        uses: amannn/action-semantic-pull-request@v5
+        # Using the latest stable version as per the documentation
+        uses: amannn/action-semantic-pull-request@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Use the local .commitlintrc.json for consistent rules, especially for 'scope-enum'.
-          configuration: .commitlintrc.json
-          allow_empty_headline: false
+          # A list of valid types, separated by newlines.
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          
+          # A list of valid scopes, separated by newlines.
+          # We are explicitly listing scopes from our .commitlintrc.json to ensure consistency.
+          scopes: |
+            project
+            activity
+            payment
+            activity-schema
+            payment-schema
+            
+          # REASON: The subject (the main description) of a commit message should never be empty.
+          # This regex ensures there is at least one character in the subject.
+          subjectPattern: ".+"
+          
+          # Optional: Custom error message for the subject pattern.
+          subjectPatternError: "The subject of the PR title must not be empty."
