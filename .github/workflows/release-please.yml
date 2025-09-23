@@ -1,23 +1,54 @@
-# REASON: This file defines the GitHub Action that automates release creation.
 name: Release Please
 
 on:
-  # REASON: This workflow triggers ONLY when a push is made to the 'main' branch.
+  # REASON: This workflow must react to changes in BOTH the development branch (to prepare releases)
+  # and the main branch (to finalize them).
   push:
     branches:
+      - dev
       - main
 
+# REASON: Release Please needs elevated permissions.
+# 'contents: write' is for creating commits, tags, and releases.
+# 'pull-requests: write' is for creating and updating the "Release PR".
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  release-please:
-    # REASON: Defines the name of the job that will appear in the GitHub UI.
-    name: Create Release
+  # === STAGE 1: Prepare the "Release PR" in the `dev` branch ===
+  prepare-release-pr:
+    # REASON: This is the core of the two-stage process. This job ONLY runs for the `dev` branch.
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
-      # REASON: This is the official Google action for release-please.
-      - uses: google-github-actions/release-please-action@v3
+      # REASON: This step runs the main release-please logic.
+      - name: Run Release Please for dev
+        uses: google-github-actions/release-please-action@v4
         with:
-          # REASON: Tells the action to look for a config file to handle multiple components.
+          # REASON: 'manifest-pr' command tells the action to analyze commits and create/update a Pull Request
+          # based on the manifest configuration. It's the "preparation" step.
+          command: manifest-pr
+          # REASON: Specifies the path to our main config file, which describes the monorepo structure.
           config-file: .release-please-config.json
+          # REASON: Specifies the path to the manifest file, which tracks current package versions.
+          manifest-file: .release-please-manifest.json
+
+  # === STAGE 2: Create the actual Release when merged into `main` ===
+  create-release:
+    # REASON: This job ONLY runs for the `main` branch, triggering the final release.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      # REASON: This step runs the main release-please logic for the finalization.
+      - name: Run Release Please for main
+        uses: google-github-actions/release-please-action@v4
+        id: release
+        with:
+          # REASON: 'manifest-release' command reads the manifest, creates Git tags for each released component,
+          # and publishes the corresponding GitHub Releases with changelogs.
+          command: manifest-release
+          # REASON: Specifies the path to our main config file.
+          config-file: .release-please-config.json
+          # REASON: Specifies the path to the manifest file.
+          manifest-file: .release-please-manifest.json
