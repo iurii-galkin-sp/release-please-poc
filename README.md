@@ -64,4 +64,188 @@ The commit validation rules are configured in the `.commitlintrc.json` file. The
 
 ---
 
-This text is ready to be copied and pasted directly into your `README.md`. It clearly explains the system, provides simple setup instructions, and offers actionable test cases that are directly tied to your project's configuration.
+## Level 4: Branch Protection Rules
+
+To enforce our `main <- stg <- dev` workflow and prevent common errors, a set of protection rules is configured for each primary branch. These rules are the technical foundation of our development process.
+
+### Goal
+
+1.  **Prevent Direct Pushes:** To ensure all code changes go through a formal review process, direct pushes to `main`, `stg`, and `dev` are prohibited.
+2.  **Enforce Pull Requests:** All changes must be submitted via a Pull Request.
+3.  **Mandate Quality Checks:** To maintain code quality and stability, all required status checks (like tests, builds, and linters) must pass before a PR can be merged.
+4.  **Enforce Merge Strategy:** To maintain a clean and readable Git history, a specific merge strategy is enforced depending on the target branch (`Squash` for `dev`, `Merge Commit` for `main`/`stg`).
+
+### How It Works
+
+We have three sets of branch protection rules configured in the repository settings (`Settings -> Branches`).
+
+*   **For the `main` and `stg` branches:** The rules are strict. They require a PR, all status checks must pass, and the branch must be up-to-date with its target before merging. This ensures maximum stability.
+*   **For the `dev` branch:** The rules are similar but optimized for a faster development pace. Specifically, it does not require the branch to be up-to-date before merging, as `dev` is a very active branch.
+*   **Merge Strategy Enforcement:** The choice of merge method is a **process-level agreement**, enforced during code review. In the repository settings (`Settings -> General -> Pull Requests`), only "Allow merge commits" and "Allow squash merging" are enabled, while "Allow rebase merging" is disabled entirely.
+
+This section provides the exact configuration for the branch protection rules required by our workflow. These rules are configured under **`Settings > Branches > Branch protection rules`**.
+
+### **Rule 1: `main` Branch Protection**
+
+**Objective:** Maximum stability. This is our production branch.
+
+1.  **Branch name pattern**: `main`
+2.  **Enable** ✅ `Require a pull request before merging`.
+    *   `Require approvals`: Set to `0` (for now, as a solo developer).
+3.  **Enable** ✅ `Dismiss stale pull request approvals when new commits are pushed`.
+4.  **Enable** ✅ `Require status checks to pass before merging`.
+    *   **Enable** ✅ `Require branches to be up to date before merging`. **CRITICAL for `main`!**
+    *   **Add checks**:
+        *   `Check PR Title`
+        *   *(Future)* `build`
+        *   *(Future)* `test`
+        *   *(Future)* `Gatekeeper: main`
+5.  **Enable** ✅ `Do not allow bypassing the above settings`.
+6.  **Under `Rules applied to everyone including administrators`:**
+    *   **Disable** ⬜ `Allow force pushes`.
+    *   **Disable** ⬜ `Allow deletions`.
+
+---
+
+### **Rule 2: `stg` Branch Protection**
+
+**Objective:** Pre-production stability. Mirrors `main` rules.
+
+1.  **Branch name pattern**: `stg`
+2.  **Enable** ✅ `Require a pull request before merging`.
+    *   `Require approvals`: Set to `0`.
+3.  **Enable** ✅ `Dismiss stale pull request approvals...`.
+4.  **Enable** ✅ `Require status checks to pass before merging`.
+    *   **Enable** ✅ `Require branches to be up to date before merging`.
+    *   **Add checks**: Same as `main`.
+5.  **Enable** ✅ `Do not allow bypassing the above settings`.
+6.  **Under `Rules applied to everyone including administrators`:**
+    *   **Disable** ⬜ `Allow force pushes`.
+    *   **Disable** ⬜ `Allow deletions`.
+
+---
+
+### **Rule 3: `dev` Branch Protection**
+
+**Objective:** Ensure a clean, conventional commit history for `release-please`.
+
+1.  **Branch name pattern**: `dev`
+2.  **Enable** ✅ `Require a pull request before merging`.
+    *   `Require approvals`: Set to `0`.
+3.  **Enable** ✅ `Dismiss stale pull request approvals...`.
+4.  **Enable** ✅ `Require status checks to pass before merging`.
+    *   **Disable** ⬜ `Require branches to be up to date before merging`. **IMPORTANT!** This is disabled to speed up the development workflow on this active branch.
+    *   **Add checks**:
+        *   `Check PR Title`
+        *   *(Future)* `build`
+        *   *(Future)* `test`
+        *   *(Future)* `Gatekeeper: dev`
+5.  **Enable** ✅ `Do not allow bypassing the above settings`.
+6.  **Under `Rules applied to everyone including administrators`:**
+    *   **Disable** ⬜ `Allow force pushes`.
+    *   **Disable** ⬜ `Allow deletions`.
+
+---
+
+### **Repository-Wide Merge Strategy Configuration**
+
+This is configured under **`Settings > General > Pull Requests`**.
+
+1.  **Disable** ⬜ `Allow rebase merging`. This method rewrites history and is forbidden.
+2.  **Enable** ✅ `Allow squash merging`. **This method MUST be used when merging into `dev`**.
+3.  **Enable** ✅ `Allow merge commits`. **This method MUST be used when merging into `stg` and `main`**.
+
+---
+
+### Testing Scenarios for Branch Protection Rules
+
+This section describes how to verify that the branch protection rules are working as expected.
+
+#### **Positive Scenarios (Expected to Succeed)**
+
+| Action to Test | How to Verify | Expected Result |
+| :--- | :--- | :--- |
+| **Correct Merge into `dev`** | Open a PR into `dev` and click the "Merge" button dropdown. | The **"Squash and merge"** option is available and should be selected. The PR merges successfully after all checks pass. |
+| **Correct Merge into `main`** | Open a PR from `stg` into `main` and click the "Merge" button dropdown. | The **"Create a merge commit"** option is available and should be selected. The PR merges successfully after all checks pass. |
+
+#### **Negative Scenarios (Expected to be Blocked)**
+
+| Action to Test | How to Verify | Expected Result & Reason for Failure |
+| :--- | :--- | :--- |
+| **Direct Push is Blocked** | From your local machine, try to push a commit directly to `dev` using `git push origin dev`. | The push is **rejected** by Git. The remote server will return an error like `(pre-receive hook declined)` or `(protected branch hook declined)`, because direct pushes are prohibited. |
+| **Merge is Blocked if Checks Fail** | Open a PR with a failing status check (e.g., an invalid title that fails the `Check PR Title` check). | The "Merge pull request" button is **disabled (greyed out)**. A message indicates that required status checks have not passed. |
+| **Rebase Merging is Not Possible** | Open any PR and click the "Merge" button dropdown. | The **"Rebase and merge"** option is completely **missing** from the list, as it has been disabled in the repository settings. |
+| **Merge is Blocked if `main` is not Up-to-Date** | Open a PR targeting `main`. While it's open, merge another PR into `main`. Then, return to the first PR. | The PR is now marked as "out-of-date". The "Merge" button is **disabled** until you click "Update branch", because the `main` branch requires branches to be up-to-date before merging. |
+
+### **Testing and Verification Plan**
+
+| Test Case | How to Verify | Expected Result & Reason |
+| :--- | :--- | :--- |
+| **TC-1: Block direct push to `dev`** | `git checkout dev && git commit --allow-empty -m "test" && git push` | **Push REJECTED**. Reason: Branch is protected, requiring a pull request. |
+| **TC-2: Block merge on failed check** | Open a PR to `dev` with an invalid title (e.g., "my pr"). | **Merge button DISABLED**. Reason: `Check PR Title` status check is failing. |
+| **TC-3: Block merge if `main` is outdated** | Open a PR to `main`. While open, merge another PR into `main`. | **Merge button DISABLED** on the first PR. Reason: Branch must be updated before merging. |
+| **TC-4: Verify correct merge into `dev`** | Open a PR to `dev`. All checks pass. | **"Squash and merge"** option is available and should be used. |
+| **TC-5: Verify correct merge into `main`**| Open a PR from `stg` to `main`. All checks pass. | **"Create a merge commit"** option is available and should be used. |
+
+### **Rule 4: `stg` Branch Ruleset**
+
+**Objective:** Ensure pre-production stability. This branch must be as stable as `main`.
+
+**Configuration Path:** `Settings > Branches > Rulesets > New ruleset`
+
+1.  **`Ruleset name`**: `Staging Branch Rules`
+2.  **`Enforcement status`**: `Active`
+3.  **`Target branches`**:
+    *   `Add a target`: `Include refs (branches)`
+    *   `Matching pattern`: `stg`
+4.  **`Branch protections`**:
+    *   ✅ **Enable** `Restrict deletions`.
+    *   ✅ **Enable** `Require a pull request before merging`.
+        *   `Required approvals`: Set to `0`.
+        *   ✅ **Enable** `Dismiss stale approvals...`.
+    *   ✅ **Enable** `Require status checks to pass before merging`.
+        *   ✅ **Enable** `Require branches to be up to date before merging`. **CRITICAL for `stg`!**
+        *   **Add checks**: `Check PR Title`, `build`, `test`, `Gatekeeper: stg` (future).
+    *   ✅ **Enable** `Restrict force pushes`.
+5.  **`Merge controls`**:
+    *   ✅ **Block "Squash merge"**. REASON: We must preserve the clean commit history coming from `dev`.
+    *   ✅ **Block "Rebase merge"**. REASON: Rewriting history is forbidden.
+    *   ⬜ **Do not block "Merge commit"**. This is the only allowed method.
+
+---
+
+### **Rule 5: `dev` Branch Ruleset**
+
+**Objective:** Enforce a clean, feature-based commit history and a fast development pace.
+
+**Configuration Path:** `Settings > Branches > Rulesets > New ruleset`
+
+1.  **`Ruleset name`**: `Development Branch Rules`
+2.  **`Enforcement status`**: `Active`
+3.  **`Target branches`**:
+    *   `Add a target`: `Include refs (branches)`
+    *   `Matching pattern`: `dev`
+4.  **`Branch protections`**:
+    *   ✅ **Enable** `Restrict deletions`.
+    *   ✅ **Enable** `Require a pull request before merging`.
+        *   `Required approvals`: Set to `0`.
+        *   ✅ **Enable** `Dismiss stale approvals...`.
+    *   ✅ **Enable** `Require status checks to pass before merging`.
+        *   ⬜ **Disable** `Require branches to be up to date before merging`. **IMPORTANT!** This is disabled to increase workflow velocity on this active branch.
+        *   **Add checks**: `Check PR Title`, `build`, `test`, `Gatekeeper: dev` (future).
+    *   ✅ **Enable** `Restrict force pushes`.
+5.  **`Merge controls`**:
+    *   ✅ **Block "Merge commit"**. REASON: We must enforce a clean, linear history. Each PR should become one commit.
+    *   ✅ **Block "Rebase merge"**. REASON: Rewriting history is forbidden.
+    *   ⬜ **Do not block "Squash merge"**. This is the only allowed method.
+
+---
+
+### **Testing and Verification Plan for `stg` and `dev` Rulesets**
+
+| Test Case | How to Verify | Expected Result & Reason |
+| :--- | :--- | :--- |
+| **TC-6: Enforce Squash on `dev`** | Open a PR into `dev`. After all checks pass, click the "Merge" button. | The merge dialog **only shows the "Squash and merge"** option. Other methods are blocked and unavailable. |
+| **TC-7: Enforce Merge Commit on `stg`** | Open a PR from `dev` into `stg`. After all checks pass, click the "Merge" button. | The merge dialog **only shows the "Create a merge commit"** option. Other methods are blocked. |
+| **TC-8: Outdated Branch Block on `stg`** | Open a PR to `stg`. While it's open, push another commit directly to `stg` (if possible, or merge another PR). | The first PR is now **blocked from merging**. The "Update branch" button appears. Reason: `stg` requires branches to be up-to-date. |
+| **TC-9: Outdated Branch Ignored on `dev`**| Open a PR to `dev`. While it's open, merge another PR into `dev`. | The first PR is **NOT blocked from merging** (it may show a warning, but the button remains active). Reason: `dev` does not require branches to be up-to-date. |
