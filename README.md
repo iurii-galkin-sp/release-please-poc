@@ -249,3 +249,47 @@ This section describes how to verify that the branch protection rules are workin
 | **TC-7: Enforce Merge Commit on `stg`** | Open a PR from `dev` into `stg`. After all checks pass, click the "Merge" button. | The merge dialog **only shows the "Create a merge commit"** option. Other methods are blocked. |
 | **TC-8: Outdated Branch Block on `stg`** | Open a PR to `stg`. While it's open, push another commit directly to `stg` (if possible, or merge another PR). | The first PR is now **blocked from merging**. The "Update branch" button appears. Reason: `stg` requires branches to be up-to-date. |
 | **TC-9: Outdated Branch Ignored on `dev`**| Open a PR to `dev`. While it's open, merge another PR into `dev`. | The first PR is **NOT blocked from merging** (it may show a warning, but the button remains active). Reason: `dev` does not require branches to be up-to-date. |
+
+---
+
+## Level 5: Automated Release System (Release Please)
+
+To automate versioning and release notes generation, this project uses Google's `release-please` tool. The system is built around a two-stage workflow that separates release preparation from finalization.
+
+### Goal
+
+1.  **Automate Version Bumping:** Automatically determine the next semantic version for each component based on Conventional Commits.
+2.  **Generate Changelogs:** Create and maintain `CHANGELOG.md` files for each component.
+3.  **Streamline Releases:** Automate the creation of Git tags and GitHub Releases, ensuring a consistent and auditable release history.
+
+### How It Works
+
+The process is divided into two automated stages, managed by separate GitHub Actions workflows:
+
+1.  **Preparation Stage (on `dev` branch):**
+    *   **Trigger:** A push to the `dev` branch.
+    *   **Action:** The `release-please-prepare.yml` workflow runs `release-please` to analyze new commits.
+    *   **Result:** It creates or updates a single "Release PR" targeting `dev`. This PR contains only version bumps in `version.txt` files and updated `CHANGELOG.md` files for all changed components. This allows the team to review upcoming releases before they are locked in.
+
+2.  **Finalization Stage (on `main` branch):**
+    *   **Trigger:** A push to the `main` branch (which happens after a `dev -> stg -> main` merge).
+    *   **Action:** The `release-please-finalize.yml` workflow runs. It looks for commits from a merged Release PR.
+    *   **Result:** If found, it creates component-specific Git tags (e.g., `payment-v2.0.2`) and publishes corresponding GitHub Releases with auto-generated release notes.
+
+### Configuration Files
+
+The entire system is configured via the following files in the repository root:
+
+*   **`.release-please-config.json`**: The main configuration file.
+    *   `"separate-pull-requests": false` - This is set to `false` for the PoC to consolidate all component updates into a single, easy-to-review Release PR.
+    *   `"bump-minor-pre-major": true` - Ensures that for pre-1.0.0 versions, a `feat` commit correctly bumps the minor version (e.g., `0.1.0` -> `0.2.0`), following SemVer conventions for unstable packages.
+    *   `"packages"` - This object defines all trackable components within the monorepo. The key is the path to the component, and the value contains its specific configuration.
+        *   `"release-type": "simple"`: A generic release type that updates a `version.txt` file. It's used for all components as they are not standard npm packages.
+        *   `"component"`: A custom name used for creating clean Git tags (e.g., `payment-v1.0.0` instead of `services/payment-v1.0.0`).
+
+*   **`.release-please-manifest.json`**: This file acts as a database for `release-please`, storing the last released version for each component. The tool uses this file to determine which commits are new. It is automatically updated by `release-please`.
+
+*   **`.github/workflows/`**: This directory contains the GitHub Actions that drive the process.
+    *   `lint-pr-title.yml`: Ensures PR titles follow the Conventional Commits standard, which is crucial for the "squash merge" strategy.
+    *   `release-please-prepare.yml`: Manages the release preparation stage on the `dev` branch.
+    *   `release-please-finalize.yml`: Manages the release finalization stage on the `main` branch.

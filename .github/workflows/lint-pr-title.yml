@@ -1,0 +1,28 @@
+# REASON: This workflow ensures all Pull Request titles adhere to the Conventional Commits specification.
+# This is critical for the "squash merge" strategy into the 'dev' branch.
+name: 'Lint PR Title'
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: read
+  statuses: write
+
+jobs:
+  lint-pr-title:
+    name: 'Check PR Title'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check PR title against Conventional Commits'
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Use the local .commitlintrc.json for consistent rules, especially for 'scope-enum'.
+          configuration: .commitlintrc.json
+          allow_empty_headline: false
