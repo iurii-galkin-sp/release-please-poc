@@ -1,5 +1,5 @@
 # REASON: This workflow implements the "finalization" stage of our release process.
-# It runs on every push to 'main' to create Git tags and GitHub Releases based on merged Release PRs.
+# It runs on every push to 'main' to create Git tags and GitHub Releases.
 name: '2. Release Please - Finalize'
 
 on:
@@ -19,17 +19,24 @@ jobs:
       releases_created: ${{ steps.release.outputs.releases_created }}
 
     steps:
+      # REASON: This step checks out the repository code, so that release-please
+      # can access the configuration files. It is a mandatory prerequisite.
+      - uses: actions/checkout@v4
+
       - name: 'Run Release Please to create releases'
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          command: github-release
+          # REASON: This flag instructs the action to ONLY create the GitHub release.
+          # It skips the PR creation step, as we are acting on an already-merged PR.
+          skip-github-pull-request: true
+          
+          # REASON: These inputs point to our manifest-based monorepo configuration.
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # A downstream job that runs only if a release was actually created.
-  # This can be used to trigger notifications, deployments, etc.
   notify:
     name: 'Notify on Release'
     runs-on: ubuntu-latest

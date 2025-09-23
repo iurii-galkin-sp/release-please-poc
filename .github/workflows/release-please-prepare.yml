@@ -16,11 +16,19 @@ jobs:
     name: 'Create/Update Release PR'
     runs-on: ubuntu-latest
     steps:
+      # REASON: This step checks out the repository code, so that release-please
+      # can access the configuration files. It is a mandatory prerequisite.
+      - uses: actions/checkout@v4
+
       - name: 'Run Release Please to prepare a Release PR'
+        id: release
         uses: googleapis/release-please-action@v4
         with:
-          command: release-pr
-          config-file: .release-please-config.json
+          # REASON: This flag instructs the action to ONLY create/update a Pull Request.
+          # It skips the final release creation step, which is handled by the finalize workflow.
+          skip-github-release: true
+          
+          # REASON: These inputs point to our manifest-based monorepo configuration.
+          config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
-        
