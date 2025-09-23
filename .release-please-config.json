@@ -1,29 +1,30 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
-      ".": {
-      "component": "project",
-      "release-type": "node"
-    },
     "services/activity": {
       "component": "activity",
       "release-type": "simple",
-      "version-file": "version.txt"
+      "version-file": "services/activity/version.txt"
     },
     "services/payment": {
       "component": "payment",
       "release-type": "simple",
-      "version-file": "version.txt"
+      "version-file": "services/payment/version.txt"
     },
     "services/resources/database/activity/schema": {
       "component": "activity-schema",
       "release-type": "simple",
-      "version-file": "version.txt"
+      "version-file": "services/resources/database/activity/schema/version.txt"
     },
     "services/resources/database/payment/schema": {
       "component": "payment-schema",
       "release-type": "simple",
-      "version-file": "version.txt"
+      "version-file": "services/resources/database/payment/schema/version.txt"
+    },
+    ".": {
+      "component": "project",
+      "release-type": "node"
     }
-  }
+  },
+  "separate-pull-requests": false
 }
