@@ -20,7 +20,7 @@ jobs:
         uses: google-github-actions/release-please-action@v4
         with:
           command: release-pr
-          config-file: release-please-config.json
+          config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
         
