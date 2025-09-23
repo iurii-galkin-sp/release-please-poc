@@ -24,7 +24,7 @@ jobs:
     steps:
       # REASON: This step runs the main release-please logic.
       - name: Run Release Please for dev
-        uses: google-github-actions/release-please-action@v4
+        uses: googleapis/release-please-action@v4
         with:
           # REASON: 'manifest-pr' command tells the action to analyze commits and create/update a Pull Request
           # based on the manifest configuration. It's the "preparation" step.
@@ -42,7 +42,7 @@ jobs:
     steps:
       # REASON: This step runs the main release-please logic for the finalization.
       - name: Run Release Please for main
-        uses: google-github-actions/release-please-action@v4
+        uses: googleapis/release-please-action@v4
         id: release
         with:
           # REASON: 'manifest-release' command reads the manifest, creates Git tags for each released component,
