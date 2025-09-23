@@ -24,10 +24,12 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v4
         with:
+          # REASON: We explicitly tell the action that for this workflow, the target
+          # branch is 'dev'. It will look for config files and create the PR against 'dev'.
+          target-branch: dev
           # REASON: This flag instructs the action to ONLY create/update a Pull Request.
           # It skips the final release creation step, which is handled by the finalize workflow.
           skip-github-release: true
-          
           # REASON: These inputs point to our manifest-based monorepo configuration.
           config-file: release-please-config.json
           manifest-file: release-please-manifest.json
