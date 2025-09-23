@@ -293,3 +293,4 @@ The entire system is configured via the following files in the repository root:
     *   `lint-pr-title.yml`: Ensures PR titles follow the Conventional Commits standard, which is crucial for the "squash merge" strategy.
     *   `release-please-prepare.yml`: Manages the release preparation stage on the `dev` branch.
     *   `release-please-finalize.yml`: Manages the release finalization stage on the `main` branch.
+    
