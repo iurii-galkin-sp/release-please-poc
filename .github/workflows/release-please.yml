@@ -1,110 +1,52 @@
-# ------------------------------------------------------------------------------
 # WORKFLOW PURPOSE:
-# This is a single, intelligent workflow that manages the entire two-phase
-# release process. It determines which stage to run based on the context of the
-# push event to the 'main' branch, solving race conditions and trigger issues.
-# ------------------------------------------------------------------------------
-name: 'Release Please: Main Workflow'
+# This workflow ensures all Pull Request titles adhere to the Conventional Commits
+# specification. This is critical for our development process.
+
+name: 'Lint PR Title'
 
 on:
-  push:
-    branches:
-      - main
-  # Allows manual trigger for debugging or re-running a failed process.
-  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
 
 permissions:
-  contents: write
-  pull-requests: write
+  pull-requests: read
+  statuses: write
 
 jobs:
-  # ----------------------------------------------------------------------------
-  # JOB 1: Prepare Release PR
-  # This job runs for ANY push to 'main' EXCEPT for merges from our own bot.
-  # ----------------------------------------------------------------------------
-  prepare-release-pr:
-    name: '1. Prepare Release PR'
+  lint-pr-title:
+    name: 'Check PR Title'
     runs-on: ubuntu-latest
-    # MOTIVATION: This 'if' condition is the core of our new logic.
-    # It prevents this job from running when the push is a merge of a Release PR.
-    # The default title of a release PR follows the pattern 'chore(main): release vX.Y.Z'.
-    # This check prevents a race condition with the 'finalize-release' job.
-    if: "!contains(github.event.head_commit.message, 'chore(main): release')"
-
     steps:
-      - name: 'Run Release Please to prepare a Pull Request'
-        id: release-pr
-        uses: googleapis/release-please-action@v4
+      - name: 'Check PR title against Conventional Commits'
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          # This action uses the default GITHUB_TOKEN which is automatically available.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # MOTIVATION: Per v4 docs, this flag ensures only a PR is created/updated.
-          skip-github-release: true
-          config-file: release-please-config.json
-          manifest-file: release-please-manifest.json
-          token: ${{ secrets.RELEASE_PLEASE_POC_TOKEN }}
-          
-  # ----------------------------------------------------------------------------
-  # JOB 2: Finalize Release
-  # This job runs ONLY when a push to 'main' is the result of merging a Release PR.
-  # ----------------------------------------------------------------------------
-  finalize-release:
-    name: '2. Finalize Release'
-    runs-on: ubuntu-latest
-    # MOTIVATION: This 'if' condition ensures this job ONLY runs after a
-    # release PR has been merged, acting as the trigger for the finalization stage.
-    if: "contains(github.event.head_commit.message, 'chore(main): release')"
-
-    steps:
-      - name: 'Run Release Please to create GitHub Releases and Tags'
-        uses: googleapis/release-please-action@v4
-        with:
-          # MOTIVATION: Per v4 docs, this flag ensures only releases/tags are created.
-          skip-github-pull-request: true
-          config-file: release-please-config.json
-          manifest-file: release-please-manifest.json
-          token: ${{ secrets.RELEASE_PLEASE_POC_TOKEN }}
-
-  # ----------------------------------------------------------------------------
-  # JOB 3: Fix PR Checks
-  # This job solves the problem of status checks not running on bot-created PRs.
-  # It runs after 'prepare-release-pr' and forces GitHub to re-evaluate checks.
-  # ----------------------------------------------------------------------------
-  fix-pr-checks:
-    name: 'Fix Status Checks on Release PR'
-    runs-on: ubuntu-latest
-    # MOTIVATION: This job must run after 'prepare-release-pr' has completed.
-    needs: prepare-release-pr
-    # MOTIVATION: This job should always run to attempt a fix, as long as
-    # the 'prepare' job itself did not fail catastrophically.
-    if: "always() && !contains(needs.prepare-release-pr.result, 'failure')"
-
-    steps:
-      # MOTIVATION: This script uses the official GitHub API client to perform a
-      # "dummy" update on the Release PR. This action forces GitHub to re-trigger
-      # workflows associated with the 'pull_request_target' event, solving the
-      # "stuck checks" problem. This is a standard community-approved pattern.
-      - name: 'Force re-evaluation of status checks'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.RELEASE_PLEASE_POC_TOKEN }}
-          script: |
-            const prs = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:release-please-branches--main`,
-              state: 'open'
-            });
-
-            if (prs.data.length === 0) {
-              console.log('No open Release PR found. Nothing to do.');
-              return;
-            }
-
-            const prNumber = prs.data[0].number;
-            console.log(`Found Release PR #${prNumber}. Triggering check re-run by updating title.`);
-
-            await github.rest.pulls.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-              title: prs.data[0].title
-            });
+          # A list of valid types, separated by newlines.
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          # A list of valid scopes, matching our .commitlintrc.json.
+          scopes: |
+            project
+            activity
+            payment
+            activity-schema
+            payment-schema
+            release
+          # The main description of a commit message should never be empty.
+          subjectPattern: ".+"
+          subjectPatternError: "The subject of the PR title must not be empty."
