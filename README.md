@@ -254,6 +254,15 @@ This section describes how to verify that our system architecture and protection
 | **T3.2** | Block Invalid Merge to `stg` | Open a PR from a `feature/*` branch directly into `stg`. | A `Gatekeeper` status check **FAILS**. The merge button is disabled. Reason: Only `dev` is allowed to merge into `stg`. |
 | **T3.3** | Allow Valid Hotfix Merge to `main` | Open a PR from a `hotfix/*` branch into `main`. | The `Gatekeeper` status check **PASSES**. Merging is allowed. |
 
+##### **T4: `release-please` Workflow Verification**
+
+This is the most critical test suite to validate our automation logic.
+
+| ID | Test Case | Action to Verify | Expected Result & Reason |
+|:---|:---|:---|:---|
+| **T4.1** | **Release PR is Auto-Updating** | 1. Ensure a "Release PR" is currently open. If not, trigger its creation by merging a `feat` or `fix` commit into `main`. <br> 2. **Do not merge the existing Release PR.** <br> 3. Create and merge a **new**, separate PR with a single commit (e.g., `fix(project): add a new test case`) into `main`. | The existing "Release PR" **is automatically updated** by the `release-please` bot. A new commit from the bot appears in the PR's history, and the `CHANGELOG.md` file now includes the "add a new test case" entry. <br><br> **Reason:** This proves our hypothesis that `release-please` correctly maintains a single, always-up-to-date release candidate. |
+| **T4.2** | **Merge Commits are Ignored ("Noise-Cancelling")** | 1. Perform a full promotion cycle: `feature -> dev` (Squash), then `dev -> stg` (Merge Commit), and finally `stg -> main` (Merge Commit). <br> 2. **Crucially, use `chore(release): ...` messages** for the merge commits into `stg` and `main`. <br> 3. Let `release-please` create its "Release PR". | The final `CHANGELOG.md` in the Release PR **contains ONLY the `feat`/`fix` commits** from the original feature branches. It does **NOT** contain any `chore(release)` entries. <br><br> **Reason:** This proves our "noise-cancelling" strategy works, producing a clean, human-readable changelog. |
+
 ### 3.2. Automated Release System (release-please)
 
 To automate versioning and release notes generation, this project uses Google's `release-please` tool. The system is built around a two-stage workflow that separates release preparation from finalization, providing a clear and auditable release process.
