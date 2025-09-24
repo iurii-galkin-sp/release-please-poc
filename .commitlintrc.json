@@ -10,7 +10,8 @@
         "activity",
         "payment",
         "activity-schema",
-        "payment-schema"
+        "payment-schema",
+        "release"
       ]
     ],
     "header-max-length": [2, "always", 72],
