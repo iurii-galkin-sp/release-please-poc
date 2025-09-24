@@ -280,7 +280,7 @@ The process is divided into two automated stages, managed by separate GitHub Act
 
 The entire system is configured via the following files in the repository root:
 
-*   **`.release-please-config.json`**: The main configuration file.
+*   **`release-please-config.json`**: The main configuration file.
     *   `"separate-pull-requests": false` - This is set to `false` for the PoC to consolidate all component updates into a single, easy-to-review Release PR.
     *   `"bump-minor-pre-major": true` - Ensures that for pre-1.0.0 versions, a `feat` commit correctly bumps the minor version (e.g., `0.1.0` -> `0.2.0`), following SemVer conventions for unstable packages.
     *   `"packages"` - This object defines all trackable components within the monorepo. The key is the path to the component, and the value contains its specific configuration.
@@ -293,4 +293,70 @@ The entire system is configured via the following files in the repository root:
     *   `lint-pr-title.yml`: Ensures PR titles follow the Conventional Commits standard, which is crucial for the "squash merge" strategy.
     *   `release-please-prepare.yml`: Manages the release preparation stage on the `dev` branch.
     *   `release-please-finalize.yml`: Manages the release finalization stage on the `main` branch.
+
+To automate versioning and release notes generation, this project uses Google's `release-please` tool. The system is built around a two-stage workflow that separates release preparation from finalization, providing a clear and auditable release process.
+
+### Goal
+1.  **Automate Version Bumping:** Automatically determine the next semantic version for each component based on Conventional Commits.
+2.  **Generate Changelogs:** Create and maintain `CHANGELOG.md` files for each component.
+3.  **Streamline Releases:** Automate the creation of Git tags and GitHub Releases.
+
+### One-Time Setup
+
+Before the system can operate, the following settings must be configured in the repository:
+
+1.  **Enable Workflow Permissions:**
+    *   **Path:** `Settings > Actions > General`.
+    *   **Action:** In the `Workflow permissions` section, select `Read and write permissions`.
+    *   **Crucial Step:** Check the box labeled **`Allow GitHub Actions to create and approve pull requests`**.
+    *   **Reason:** This permission is required for the `release-please` action to create Release PRs on behalf of the `github-actions[bot]`. Without it, the workflow will fail with a permissions error.
+
+2.  **Merging Initial CI/CD Workflows (The "Chicken and Egg" Problem):**
+    *   **Problem:** To merge a PR into a protected branch (e.g., `dev`), it must pass the `Check PR Title` status check. However, the workflow file that *runs* this check (`lint-pr-title.yml`) only exists within the PR itself and is not yet in the target branch. GitHub cannot run a workflow that it doesn't know about yet.
+    *   **Solution:** To merge the very first PR that introduces the CI/CD workflows, you must temporarily disable the required status check.
+        1.  Go to `Settings > Branches > Rulesets` and edit the ruleset for `dev`.
+        2.  Temporarily remove `Check PR Title` from the list of required status checks and save.
+        3.  Merge the Pull Request.
+        4.  **Immediately** go back and re-add `Check PR Title` to the required status checks. This one-time action bootstraps the system.
+
+### The Release Workflow: A Two-Stage Process
+
+The process is divided into two automated stages, managed by separate GitHub Actions workflows.
+
+#### Stage 1: Release Preparation (The "Release PR")
+
+This is the primary output of the preparation stage.
+
+*   **What it is:** An automatically generated Pull Request created by the `release-please-prepare.yml` workflow.
+*   **Trigger:** A push to the `dev` branch.
+*   **Title Format:** The PR title is configured via `pull-request-title-pattern` in `release-please-config.json` and follows the format: `chore(release): prepare release ${version}` (e.g., `chore(release): prepare release 1.1.0`).
+*   **Content:**
+    1.  **`CHANGELOG.md`:** An auto-generated summary of all `feat`, `fix`, and `perf` commits merged into `dev` since the last release. It includes links to commits and contributors.
+    2.  **`release-please-manifest.json`:** An update to the version numbers for all components that have changed.
+*   **Purpose:** This PR serves as a "staging area" for the next release. The team can review the upcoming changes and version bumps before they are finalized.
+*   **Action Required:** A developer must review and **merge** this PR into `dev`.
+*   **Automatic Updates:** If other PRs are merged into `dev` while the Release PR is open, `release-please` will automatically update its PR to include the new changes, ensuring it's always up-to-date with the `dev` branch.
+
+#### Stage 2: Release Finalization (Git Tags & GitHub Releases)
+
+This is the final output of the entire process.
+
+*   **What it is:** Official Git tags and GitHub Release entries.
+*   **Trigger:** Merging code from `dev` into `main` (via the `stg` branch), which contains the commits from a merged "Release PR".
+*   **Action:** The `release-please-finalize.yml` workflow runs.
+*   **Result:**
+    1.  **Git Tags:** For each component updated in the manifest, a corresponding Git tag is created (e.g., `project-v1.1.0`).
+    2.  **GitHub Releases:** A corresponding GitHub Release is published with the `CHANGELOG.md` notes for that version.
+*   **Purpose:** To create immutable, point-in-time references for each released version, providing a clean and official release history.
+*   **Action Required:** None. This stage is fully automated.
+
+### Configuration Files
+
+The system is configured via the following files:
+
+*   **`release-please-config.json` & `release-please-manifest.json`**: Define the monorepo components and track their versions.
+*   **`.github/workflows/`**:
+    *   `lint-pr-title.yml`: Enforces Conventional Commits on PR titles.
+    *   `release-please-prepare.yml`: Manages the "Release PR" creation (Stage 1).
+    *   `release-please-finalize.yml`: Manages Git tags and GitHub Releases (Stage 2).
     
