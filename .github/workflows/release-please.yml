@@ -40,7 +40,7 @@ jobs:
           skip-github-release: true
           config-file: release-please-config.json
           manifest-file: release-please-manifest.json
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_POC_TOKEN }}
           
   # ----------------------------------------------------------------------------
   # JOB 2: Finalize Release
@@ -61,7 +61,7 @@ jobs:
           skip-github-pull-request: true
           config-file: release-please-config.json
           manifest-file: release-please-manifest.json
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_POC_TOKEN }}
 
   # ----------------------------------------------------------------------------
   # JOB 3: Fix PR Checks
@@ -85,7 +85,7 @@ jobs:
       - name: 'Force re-evaluation of status checks'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.RELEASE_PLEASE_POC_TOKEN }}
           script: |
             const prs = await github.rest.pulls.list({
               owner: context.repo.owner,
