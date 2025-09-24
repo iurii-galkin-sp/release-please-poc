@@ -1,362 +1,339 @@
-# release-please-poc
+# Release Please PoC: Automated Versioning System
 
-## 💬 Local Commit Message Linting (Husky + Commitlint)
+## Executive Summary: The Business Value of Automation
 
-To ensure a consistent Git history and enable automated versioning, this project enforces a local commit message validation system.
+This document details the automated versioning and release system implemented for this project. This summary is intended for all stakeholders, including product managers, technical directors, and team leads, to clarify the purpose and business value of this engineering initiative.
 
-### Goal
+### The Problem We Solved
 
-This system solves two primary objectives:
-1.  **Error Prevention:** It blocks commits with improperly formatted messages before they are even created in the repository.
-2.  **Release Automation:** It guarantees that all commits merged into the main branch adhere to the [Conventional Commits](https://www.conventionalcommits.org/) standard, which our `release-please` tool relies on.
+Previously, the process of releasing new software versions was largely manual. This approach presented several business risks:
+*  **Slow Time-to-Market:** Manual procedures were time-consuming, delaying the delivery of new features and critical bug fixes to our users.
+*  **High Risk of Human Error:** Each manual step in the release process was a potential point of failure, increasing the chances of deploying unstable code to production.
+*  **Lack of Transparency:** It was difficult to create a clear, auditable history of what specific changes were included in each version, complicating planning and support.
 
-### How It Works
+### Our Solution
 
-We use two main utilities:
--   **Husky**: Manages Git hooks. We use the `commit-msg` hook, which triggers every time you run `git commit`.
--   **Commitlint**: Validates the commit message against a defined set of rules.
+We have implemented a robust, two-phase automated system built around industry-standard tools and practices (`release-please` and `Conventional Commits`). This system fully automates version management, changelog generation, and the creation of release artifacts. It enforces a strict and predictable development workflow, ensuring that every change is tracked and validated.
 
-The process is as follows:
-`git commit` -> `Husky` intercepts the event -> `Husky` runs `Commitlint` -> `Commitlint` validates the message -> If the message is invalid, the commit is aborted.
+### Business Impact & Value
 
-### Developer Setup
+1. **Increased Agility & Faster Delivery:** By automating routine tasks, we drastically reduce the "lead time" for releases. This allows us to deliver value to our customers faster, whether it's a new feature or a critical security patch.
+2. **Enhanced Reliability & Stability:** Automating the process eliminates a whole class of human errors. This leads to more reliable deployments, higher uptime, and greater user trust in our product.
+3. **Complete Transparency & Auditability:** Every release is now automatically accompanied by a detailed changelog. This provides crystal-clear visibility for all stakeholders. Product managers can easily track feature delivery, and support teams can instantly see which bug fixes are included in a version. This creates a fully auditable release history.
+4. **Improved Developer Focus & Productivity:** Our engineers can now focus on their primary task—building great software—instead of being burdened by complex and error-prone release procedures. This boosts morale and allows us to innovate more effectively.
 
+---
+
+## 1. Developer Quick Start
+
+This section contains everything a developer needs to know to start working on the project.
+
+### 1.1. Local Setup: Commit Message Linting
+
+To ensure a consistent Git history and enable our automation, this project enforces commit message validation on your local machine using `Husky` and `Commitlint`.
+
+**Goal:**
+*  **Error Prevention:** Blocks commits with improperly formatted messages before they are created.
+*  **Automation Foundation:** Guarantees that all commits adhere to the standard our release tools rely on.
+
+**How to Activate:**
 To activate this system on your local machine, follow these one-time setup steps:
-1.  Install [Node.js](https://nodejs.org/) (version 16+ is recommended).
-2.  Run the following command in the project's root directory:
-    ```bash
-    npm install
-    ```
-    This command will download all necessary development tools and automatically configure the Git hooks.
+1. Install [Node.js](https://nodejs.org/) (version 16+ is recommended).
+2. Run the following command in the project's root directory:
+  ```bash
+  npm install
+  ```
+This command will download all necessary development tools and automatically configure the Git hooks.
 
-### Rules and Testing Scenarios
+### 1.2. The Golden Rule: Conventional Commits
 
-The commit validation rules are configured in the `.commitlintrc.json` file. The scenarios below are based on the current configuration. **If you modify the rules in `.commitlintrc.json`, remember to update these examples!**
+All commit messages and Pull Request titles in this project **MUST** follow the [Conventional Commits specification v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/). This is not a style preference; it is the engine that powers our entire release automation system.
 
-**Current Key Rules:**
-1.  **`extends: ['@commitlint/config-conventional']`**: We inherit the base ruleset from Conventional Commits (requires a type, description, etc.). This includes:
-    *   A mandatory type and subject.
-    *   **A line length limit for the commit body (100 characters).**
-2.  **`header-max-length: 72`**: The header line must not exceed 72 characters.
-3.  **`scope-enum`**: The `scope` field must be one of the predefined values. This prevents typos and enforces consistency. The current list is: `project`, `activity`, `payment`, `activity-schema`, `payment-schema`.
+#### Commit Structure
 
----
+The basic structure of a commit message is as follows:
+```
+<type>(<scope>): <subject>
+<BLANK LINE>
+[optional body]
+<BLANK LINE>
+[optional footer(s)]
+```
 
-#### ✅ Examples of Valid Commits (will pass)
+#### Common Types
 
-| Command                                                              | Explanation                                                                     |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `git commit -m "feat(payment): add support for credit cards"`        | A new feature (`feat`) within an allowed scope (`payment`).                     |
-| `git commit -m "fix(project): correct typo in config"`               | A bug fix (`fix`) within an allowed scope (`project`).                          |
-| `git commit -m "docs: update installation guide"`                    | A commit without a `scope` (which is allowed by the standard).                  |
-| `git commit -m "refactor!: drop support for legacy API"`             | A commit with a `BREAKING CHANGE` (indicated by `!`).                           |
+While the specification allows for many types, we primarily use the following:
+*  `feat`: A new feature for the user.
+*  `fix`: A bug fix for the user.
+*  `perf`: A code change that improves performance.
+*  `build`: Changes that affect the build system or external dependencies.
+*  `ci`: Changes to our CI configuration files and scripts.
+*  `docs`: Documentation only changes.
+*  `refactor`: A code change that neither fixes a bug nor adds a feature.
+*  `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc).
+*  `test`: Adding missing tests or correcting existing tests.
+*  `chore`: Other changes that don't modify `src` or `test` files.
 
-#### ❌ Examples of Invalid Commits (will be blocked)
+#### Impact on Versioning
 
-| Command                                                                | Reason for Failure                                                              | Commitlint Error Message                                                              |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `git commit -m "added login"`                                          | Invalid type. "added" is not a standard commit type.                            | `✖ type must be one of [build, chore, ci, docs, feat, fix, ...]`                      |
-| `git commit -m "feat(api): add new endpoint"`                          | Invalid `scope`. "api" is not in the list defined in `.commitlintrc.json`.      | `✖ scope must be one of [project, activity, payment, ...]`                            |
-| `git commit -m "fix(payment): ... (a very long and detailed description) ..."` | Header is longer than 72 characters, violating the `header-max-length` rule.    | `✖ header must not be longer than 72 characters`                                      |
-| `git commit -m "fix:"`                                                 | The subject (description) after the colon is empty.                             | `✖ subject may not be empty`                                                          |
-| `git commit -m "FIX(payment): some fix"`                               | The commit type must be in lower-case.                                          | `✖ type must be lower-case`                                                           |
-| `git commit -m "feat: ...a very long line without line breaks..."`     | A line in the commit body exceeds the 100-character limit. Long lines must be wrapped. | `✖ body's lines must not be longer than 100 characters`        |
+The `type` of the commit directly determines how the version number will be incremented:
+*  `feat` results in a **minor** version bump (e.g., `1.2.3` -> `1.3.0`).
+*  `fix` or `perf` result in a **patch** version bump (e.g., `1.2.3` -> `1.2.4`).
+*  A `!` after the type (e.g., `feat!`) or a `BREAKING CHANGE:` footer results in a **major** version bump (e.g., `1.2.3` -> `2.0.0`).
 
----
+#### Project-Specific Rules
 
-## Level 4: Branch Protection Rules
-
-To enforce our `main <- stg <- dev` workflow and prevent common errors, a set of protection rules is configured for each primary branch. These rules are the technical foundation of our development process.
-
-### Goal
-
-1.  **Prevent Direct Pushes:** To ensure all code changes go through a formal review process, direct pushes to `main`, `stg`, and `dev` are prohibited.
-2.  **Enforce Pull Requests:** All changes must be submitted via a Pull Request.
-3.  **Mandate Quality Checks:** To maintain code quality and stability, all required status checks (like tests, builds, and linters) must pass before a PR can be merged.
-4.  **Enforce Merge Strategy:** To maintain a clean and readable Git history, a specific merge strategy is enforced depending on the target branch (`Squash` for `dev`, `Merge Commit` for `main`/`stg`).
-
-### How It Works
-
-We have three sets of branch protection rules configured in the repository settings (`Settings -> Branches`).
-
-*   **For the `main` and `stg` branches:** The rules are strict. They require a PR, all status checks must pass, and the branch must be up-to-date with its target before merging. This ensures maximum stability.
-*   **For the `dev` branch:** The rules are similar but optimized for a faster development pace. Specifically, it does not require the branch to be up-to-date before merging, as `dev` is a very active branch.
-*   **Merge Strategy Enforcement:** The choice of merge method is a **process-level agreement**, enforced during code review. In the repository settings (`Settings -> General -> Pull Requests`), only "Allow merge commits" and "Allow squash merging" are enabled, while "Allow rebase merging" is disabled entirely.
-
-This section provides the exact configuration for the branch protection rules required by our workflow. These rules are configured under **`Settings > Branches > Branch protection rules`**.
-
-### **Rule 1: `main` Branch Protection**
-
-**Objective:** Maximum stability. This is our production branch.
-
-1.  **Branch name pattern**: `main`
-2.  **Enable** ✅ `Require a pull request before merging`.
-    *   `Require approvals`: Set to `0` (for now, as a solo developer).
-3.  **Enable** ✅ `Dismiss stale pull request approvals when new commits are pushed`.
-4.  **Enable** ✅ `Require status checks to pass before merging`.
-    *   **Enable** ✅ `Require branches to be up to date before merging`. **CRITICAL for `main`!**
-    *   **Add checks**:
-        *   `Check PR Title`
-        *   *(Future)* `build`
-        *   *(Future)* `test`
-        *   *(Future)* `Gatekeeper: main`
-5.  **Enable** ✅ `Do not allow bypassing the above settings`.
-6.  **Under `Rules applied to everyone including administrators`:**
-    *   **Disable** ⬜ `Allow force pushes`.
-    *   **Disable** ⬜ `Allow deletions`.
+Our local validation (`.commitlintrc.json`) enforces these additional key rules:
+1. **A `scope` is mandatory** and must be one of the predefined values: `project`, `activity`, `payment`, `activity-schema`, `payment-schema`.
+2. **The header line must not exceed 72 characters.**
 
 ---
 
-### **Rule 2: `stg` Branch Protection**
+## 2. Our Development Workflow
 
-**Objective:** Pre-production stability. Mirrors `main` rules.
+This section describes the standard process for contributing code to the project. Adhering to this workflow is essential for maintaining code stability and enabling our automated release system.
 
-1.  **Branch name pattern**: `stg`
-2.  **Enable** ✅ `Require a pull request before merging`.
-    *   `Require approvals`: Set to `0`.
-3.  **Enable** ✅ `Dismiss stale pull request approvals...`.
-4.  **Enable** ✅ `Require status checks to pass before merging`.
-    *   **Enable** ✅ `Require branches to be up to date before merging`.
-    *   **Add checks**: Same as `main`.
-5.  **Enable** ✅ `Do not allow bypassing the above settings`.
-6.  **Under `Rules applied to everyone including administrators`:**
-    *   **Disable** ⬜ `Allow force pushes`.
-    *   **Disable** ⬜ `Allow deletions`.
+### 2.1. Branching Strategy
 
----
+We use a permanent, multi-stage branching model. Code flows in one direction, from less stable to more stable branches.
 
-### **Rule 3: `dev` Branch Protection**
+`feature/*` -> `dev` -> `stg` -> `main`
 
-**Objective:** Ensure a clean, conventional commit history for `release-please`.
+*  `main`: This branch represents the current production code. It is the most stable branch. Direct pushes are forbidden.
+*  `stg` (Staging): A pre-production branch used for final regression testing. It should be a stable reflection of what will become the next release.
+*  `dev` (Development): The main integration branch for all new features. This is an active, fast-moving branch.
+*  `feature/*` or `fix/*`: Short-lived branches created from `dev` for developing new features or non-critical bug fixes.
 
-1.  **Branch name pattern**: `dev`
-2.  **Enable** ✅ `Require a pull request before merging`.
-    *   `Require approvals`: Set to `0`.
-3.  **Enable** ✅ `Dismiss stale pull request approvals...`.
-4.  **Enable** ✅ `Require status checks to pass before merging`.
-    *   **Disable** ⬜ `Require branches to be up to date before merging`. **IMPORTANT!** This is disabled to speed up the development workflow on this active branch.
-    *   **Add checks**:
-        *   `Check PR Title`
-        *   *(Future)* `build`
-        *   *(Future)* `test`
-        *   *(Future)* `Gatekeeper: dev`
-5.  **Enable** ✅ `Do not allow bypassing the above settings`.
-6.  **Under `Rules applied to everyone including administrators`:**
-    *   **Disable** ⬜ `Allow force pushes`.
-    *   **Disable** ⬜ `Allow deletions`.
+### 2.2. Feature Lifecycle (Developer's Guide)
 
----
+This is the step-by-step process to get your work from an idea to a merged feature.
 
-### **Repository-Wide Merge Strategy Configuration**
+**Step 1: Create a Feature Branch**
+Always start by creating a new branch from the latest version of `dev`.
+```bash
+git checkout dev
+git pull
+git checkout -b feature/my-new-feature
+```
 
-This is configured under **`Settings > General > Pull Requests`**.
+**Step 2: Develop and Commit**
+Do your work on the feature branch. Create small, logical commits. Remember to follow the **Conventional Commits** standard for every commit message.
 
-1.  **Disable** ⬜ `Allow rebase merging`. This method rewrites history and is forbidden.
-2.  **Enable** ✅ `Allow squash merging`. **This method MUST be used when merging into `dev`**.
-3.  **Enable** ✅ `Allow merge commits`. **This method MUST be used when merging into `stg` and `main`**.
+**Step 3: Create a Pull Request**
+When your feature is complete, push your branch to the repository and open a Pull Request (PR) targeting the `dev` branch.
+
+**The title of your Pull Request MUST also follow the Conventional Commits standard.** This is critical because this title will become the final commit message after squashing.
+
+**Step 4: Code Review and Status Checks**
+Your PR will automatically trigger several status checks, including a check of the PR title. It must be approved by at least one other team member and all status checks must pass before it can be merged.
+
+**Step 5: Merge to `dev`**
+Merge your PR into `dev` using the **"Squash and merge"** strategy. This collapses all your feature commits into a single, clean commit on the `dev` branch.
+
+**Step 6: What Happens Next? (Automation Takes Over)**
+Once your PR is merged into `dev`, your work is officially part of the next release cycle. The automated system will eventually pick up your changes, include them in a "Release PR", and they will proceed through `stg` to `main` according to the release schedule. You do not need to take any further action.
 
 ---
 
-### Testing Scenarios for Branch Protection Rules
+## 3. System Architecture (Advanced)
 
-This section describes how to verify that the branch protection rules are working as expected.
+<details>
+ <summary>Click to expand for a deep dive into the CI/CD and Release Automation architecture.</summary>
 
-#### **Positive Scenarios (Expected to Succeed)**
+ ### 3.1. Branch Protection via Rulesets
 
-| Action to Test | How to Verify | Expected Result |
+To enforce our workflow and prevent common errors, this repository uses GitHub's **Rulesets** feature, configured under **`Settings > Branches > Rulesets`**. This modern system provides technical guarantees for our development process. We have three active rulesets, each targeting a specific branch.
+
+#### Ruleset: `main` (Production Branch)
+
+**Objective:** Maximum stability and auditability. This branch is a direct reflection of our production environment.
+
+| Rule | Configuration | REASON |
 | :--- | :--- | :--- |
-| **Correct Merge into `dev`** | Open a PR into `dev` and click the "Merge" button dropdown. | The **"Squash and merge"** option is available and should be selected. The PR merges successfully after all checks pass. |
-| **Correct Merge into `main`** | Open a PR from `stg` into `main` and click the "Merge" button dropdown. | The **"Create a merge commit"** option is available and should be selected. The PR merges successfully after all checks pass. |
+| **Require a pull request** | Enabled | Ensures all changes go through a formal review process. Direct pushes are blocked. |
+| **Require status checks to pass**| Enabled | Guarantees that code is only merged after all quality gates (linting, tests, builds) are green. |
+| *Required Checks* | `Check PR Title`, *(future: `build`, `test`)* | Specifies exactly which checks are mandatory. |
+| **Require branches to be up-to-date** | **Enabled** | **CRITICAL:** Prevents merging outdated PRs into `main`, avoiding race conditions and ensuring the PR was tested against the latest code. |
+| **Block force pushes** | Enabled | Protects the integrity and history of the production branch. |
+| **Restrict deletions** | Enabled | Prevents accidental deletion of the production branch. |
+| **Merge Controls** | Block `Squash`, Block `Rebase` | **CRITICAL:** Only "Merge commit" is allowed. This preserves the clean, linear history coming from `stg` and `dev`. |
 
-#### **Negative Scenarios (Expected to be Blocked)**
+#### Ruleset: `stg` (Staging Branch)
 
-| Action to Test | How to Verify | Expected Result & Reason for Failure |
+**Objective:** Pre-production stability. This branch mirrors the rules of `main` to ensure the testing environment is as close to production as possible.
+
+| Rule | Configuration | REASON |
 | :--- | :--- | :--- |
-| **Direct Push is Blocked** | From your local machine, try to push a commit directly to `dev` using `git push origin dev`. | The push is **rejected** by Git. The remote server will return an error like `(pre-receive hook declined)` or `(protected branch hook declined)`, because direct pushes are prohibited. |
-| **Merge is Blocked if Checks Fail** | Open a PR with a failing status check (e.g., an invalid title that fails the `Check PR Title` check). | The "Merge pull request" button is **disabled (greyed out)**. A message indicates that required status checks have not passed. |
-| **Rebase Merging is Not Possible** | Open any PR and click the "Merge" button dropdown. | The **"Rebase and merge"** option is completely **missing** from the list, as it has been disabled in the repository settings. |
-| **Merge is Blocked if `main` is not Up-to-Date** | Open a PR targeting `main`. While it's open, merge another PR into `main`. Then, return to the first PR. | The PR is now marked as "out-of-date". The "Merge" button is **disabled** until you click "Update branch", because the `main` branch requires branches to be up-to-date before merging. |
+| **Require a pull request** | Enabled | All code must be reviewed before entering the final testing stage. |
+| **Require status checks to pass**| Enabled | Ensures only quality-checked code is deployed to staging. |
+| *Required Checks* | Same as `main` | Consistency across environments. |
+| **Require branches to be up-to-date**| **Enabled** | Ensures that `stg` is always based on the latest state of the code it's integrating. |
+| **Block force pushes** | Enabled | Maintains a stable history for the staging environment. |
+| **Merge Controls** | Block `Squash`, Block `Rebase` | **CRITICAL:** Only "Merge commit" is allowed, simulating the exact merge that will happen into `main`. |
 
-### **Testing and Verification Plan**
+#### Ruleset: `dev` (Development Branch)
 
-| Test Case | How to Verify | Expected Result & Reason |
+**Objective:** Fast development velocity while ensuring a clean, feature-based commit history suitable for `release-please`.
+
+| Rule | Configuration | REASON |
 | :--- | :--- | :--- |
-| **TC-1: Block direct push to `dev`** | `git checkout dev && git commit --allow-empty -m "test" && git push` | **Push REJECTED**. Reason: Branch is protected, requiring a pull request. |
-| **TC-2: Block merge on failed check** | Open a PR to `dev` with an invalid title (e.g., "my pr"). | **Merge button DISABLED**. Reason: `Check PR Title` status check is failing. |
-| **TC-3: Block merge if `main` is outdated** | Open a PR to `main`. While open, merge another PR into `main`. | **Merge button DISABLED** on the first PR. Reason: Branch must be updated before merging. |
-| **TC-4: Verify correct merge into `dev`** | Open a PR to `dev`. All checks pass. | **"Squash and merge"** option is available and should be used. |
-| **TC-5: Verify correct merge into `main`**| Open a PR from `stg` to `main`. All checks pass. | **"Create a merge commit"** option is available and should be used. |
+| **Require a pull request** | Enabled | Even on the development branch, all changes must be reviewed. |
+| **Require status checks to pass**| Enabled | The `Check PR Title` check is the minimum quality gate. |
+| *Required Checks* | `Check PR Title` | Ensures that the resulting squash commit will be understandable by `release-please`. |
+| **Require branches to be up-to-date**| **Disabled** | **IMPORTANT:** This is intentionally disabled to increase workflow velocity on this highly active branch. Developers do not need to constantly rebase their feature branches. |
+| **Block force pushes** | Enabled | Prevents history rewrites that could disrupt other developers' work. |
+| **Merge Controls** | Block `Merge commit`, Block `Rebase`| **CRITICAL:** Only "Squash and merge" is allowed. This is mandatory to collapse all feature commits into one, clean conventional commit. |
 
-### **Rule 4: `stg` Branch Ruleset**
+#### 3.1.1. Verification Plan (Test Cases)
 
-**Objective:** Ensure pre-production stability. This branch must be as stable as `main`.
+This section describes how to verify that our system architecture and protection rules work as expected. It serves as our Acceptance Test Plan.
 
-**Configuration Path:** `Settings > Branches > Rulesets > New ruleset`
+##### T1: Core Branch Protections
 
-1.  **`Ruleset name`**: `Staging Branch Rules`
-2.  **`Enforcement status`**: `Active`
-3.  **`Target branches`**:
-    *   `Add a target`: `Include refs (branches)`
-    *   `Matching pattern`: `stg`
-4.  **`Branch protections`**:
-    *   ✅ **Enable** `Restrict deletions`.
-    *   ✅ **Enable** `Require a pull request before merging`.
-        *   `Required approvals`: Set to `0`.
-        *   ✅ **Enable** `Dismiss stale approvals...`.
-    *   ✅ **Enable** `Require status checks to pass before merging`.
-        *   ✅ **Enable** `Require branches to be up to date before merging`. **CRITICAL for `stg`!**
-        *   **Add checks**: `Check PR Title`, `build`, `test`, `Gatekeeper: stg` (future).
-    *   ✅ **Enable** `Restrict force pushes`.
-5.  **`Merge controls`**:
-    *   ✅ **Block "Squash merge"**. REASON: We must preserve the clean commit history coming from `dev`.
-    *   ✅ **Block "Rebase merge"**. REASON: Rewriting history is forbidden.
-    *   ⬜ **Do not block "Merge commit"**. This is the only allowed method.
+| ID | Test Case | Action to Verify | Expected Result & Reason |
+| :--- | :--- | :--- | :--- |
+| **T1.1** | Direct Push is Blocked | From your local machine, run `git push origin HEAD:dev`. | **Push REJECTED.** Reason: The ruleset for `dev` prohibits direct pushes, requiring all changes to go through a Pull Request. |
+| **T1.2** | Force Push is Blocked | Make a local commit, then run `git push --force origin HEAD:dev`. | **Push REJECTED.** Reason: The ruleset for `dev` has "Block force pushes" enabled to protect branch history integrity. |
+| **T1.3**| Branch Deletion is Blocked | Run `git push origin --delete dev`. | **Push REJECTED.** Reason: The ruleset for `dev` has "Restrict deletions" enabled to prevent accidental loss of the branch. |
+| **T1.4**| Merge is Blocked on Failed Check | Open a PR to `dev` with an invalid title (e.g., "my pr"). | The "Merge pull request" button is **DISABLED**. Reason: The required `Check PR Title` status check has failed. |
 
----
+##### T2: Merge Strategy and Branch State Enforcement
 
-### **Rule 5: `dev` Branch Ruleset**
+| ID | Test Case | Action to Verify | Expected Result & Reason |
+| :--- | :--- | :--- | :--- |
+| **T2.1** | Enforce Squash on `dev` | Open a PR into `dev` with a valid title. After checks pass, click the "Merge" button dropdown. | The merge dialog **ONLY shows the "Squash and merge"** option. Other methods are blocked by the ruleset. |
+| **T2.2** | Enforce Merge Commit on `stg`/`main` | Open a PR from `dev` into `stg`. After checks pass, click the "Merge" button dropdown. | The merge dialog **ONLY shows the "Create a merge commit"** option. Other methods are blocked. |
+| **T2.3** | Outdated Branch Block on `stg`/`main`| Open a PR to `stg`. While it's open, merge another PR into `stg`. Return to the first PR. | The PR is now **BLOCKED**. The "Update branch" button appears. Reason: The ruleset requires branches to be up-to-date before merging. |
+| **T2.4** | Outdated Branch Ignored on `dev` | Open a PR to `dev`. While it's open, merge another PR into `dev`. | The PR is **NOT BLOCKED** from merging. The "Update branch" button may appear, but merging is still possible. Reason: The `dev` ruleset intentionally disables the "require branches to be up-to-date" rule. |
 
-**Objective:** Enforce a clean, feature-based commit history and a fast development pace.
+##### T3: Branch Workflow Enforcement ("Gatekeeper" checks - *Future Enhancement*)
 
-**Configuration Path:** `Settings > Branches > Rulesets > New ruleset`
+| ID | Test Case | Action to Verify | Expected Result & Reason |
+| :--- | :--- | :--- | :--- |
+| **T3.1** | Block Invalid Merge to `main` | Open a PR from a `feature/*` branch directly into `main`. | A `Gatekeeper` status check **FAILS**. The merge button is disabled. Reason: Only `stg` and `hotfix/*` branches are allowed to merge into `main`. |
+| **T3.2** | Block Invalid Merge to `stg` | Open a PR from a `feature/*` branch directly into `stg`. | A `Gatekeeper` status check **FAILS**. The merge button is disabled. Reason: Only `dev` is allowed to merge into `stg`. |
+| **T3.3** | Allow Valid Hotfix Merge to `main` | Open a PR from a `hotfix/*` branch into `main`. | The `Gatekeeper` status check **PASSES**. Merging is allowed. |
 
-1.  **`Ruleset name`**: `Development Branch Rules`
-2.  **`Enforcement status`**: `Active`
-3.  **`Target branches`**:
-    *   `Add a target`: `Include refs (branches)`
-    *   `Matching pattern`: `dev`
-4.  **`Branch protections`**:
-    *   ✅ **Enable** `Restrict deletions`.
-    *   ✅ **Enable** `Require a pull request before merging`.
-        *   `Required approvals`: Set to `0`.
-        *   ✅ **Enable** `Dismiss stale approvals...`.
-    *   ✅ **Enable** `Require status checks to pass before merging`.
-        *   ⬜ **Disable** `Require branches to be up to date before merging`. **IMPORTANT!** This is disabled to increase workflow velocity on this active branch.
-        *   **Add checks**: `Check PR Title`, `build`, `test`, `Gatekeeper: dev` (future).
-    *   ✅ **Enable** `Restrict force pushes`.
-5.  **`Merge controls`**:
-    *   ✅ **Block "Merge commit"**. REASON: We must enforce a clean, linear history. Each PR should become one commit.
-    *   ✅ **Block "Rebase merge"**. REASON: Rewriting history is forbidden.
-    *   ⬜ **Do not block "Squash merge"**. This is the only allowed method.
-
----
-
-### **Testing and Verification Plan for `stg` and `dev` Rulesets**
-
-| Test Case | How to Verify | Expected Result & Reason |
-| :--- | :--- | :--- |
-| **TC-6: Enforce Squash on `dev`** | Open a PR into `dev`. After all checks pass, click the "Merge" button. | The merge dialog **only shows the "Squash and merge"** option. Other methods are blocked and unavailable. |
-| **TC-7: Enforce Merge Commit on `stg`** | Open a PR from `dev` into `stg`. After all checks pass, click the "Merge" button. | The merge dialog **only shows the "Create a merge commit"** option. Other methods are blocked. |
-| **TC-8: Outdated Branch Block on `stg`** | Open a PR to `stg`. While it's open, push another commit directly to `stg` (if possible, or merge another PR). | The first PR is now **blocked from merging**. The "Update branch" button appears. Reason: `stg` requires branches to be up-to-date. |
-| **TC-9: Outdated Branch Ignored on `dev`**| Open a PR to `dev`. While it's open, merge another PR into `dev`. | The first PR is **NOT blocked from merging** (it may show a warning, but the button remains active). Reason: `dev` does not require branches to be up-to-date. |
-
----
-
-## Level 5: Automated Release System (Release Please)
-
-To automate versioning and release notes generation, this project uses Google's `release-please` tool. The system is built around a two-stage workflow that separates release preparation from finalization.
-
-### Goal
-
-1.  **Automate Version Bumping:** Automatically determine the next semantic version for each component based on Conventional Commits.
-2.  **Generate Changelogs:** Create and maintain `CHANGELOG.md` files for each component.
-3.  **Streamline Releases:** Automate the creation of Git tags and GitHub Releases, ensuring a consistent and auditable release history.
-
-### How It Works
-
-The process is divided into two automated stages, managed by separate GitHub Actions workflows:
-
-1.  **Preparation Stage (on `dev` branch):**
-    *   **Trigger:** A push to the `dev` branch.
-    *   **Action:** The `release-please-prepare.yml` workflow runs `release-please` to analyze new commits.
-    *   **Result:** It creates or updates a single "Release PR" targeting `dev`. This PR contains only version bumps in `version.txt` files and updated `CHANGELOG.md` files for all changed components. This allows the team to review upcoming releases before they are locked in.
-
-2.  **Finalization Stage (on `main` branch):**
-    *   **Trigger:** A push to the `main` branch (which happens after a `dev -> stg -> main` merge).
-    *   **Action:** The `release-please-finalize.yml` workflow runs. It looks for commits from a merged Release PR.
-    *   **Result:** If found, it creates component-specific Git tags (e.g., `payment-v2.0.2`) and publishes corresponding GitHub Releases with auto-generated release notes.
-
-### Configuration Files
-
-The entire system is configured via the following files in the repository root:
-
-*   **`release-please-config.json`**: The main configuration file.
-    *   `"separate-pull-requests": false` - This is set to `false` for the PoC to consolidate all component updates into a single, easy-to-review Release PR.
-    *   `"bump-minor-pre-major": true` - Ensures that for pre-1.0.0 versions, a `feat` commit correctly bumps the minor version (e.g., `0.1.0` -> `0.2.0`), following SemVer conventions for unstable packages.
-    *   `"packages"` - This object defines all trackable components within the monorepo. The key is the path to the component, and the value contains its specific configuration.
-        *   `"release-type": "simple"`: A generic release type that updates a `version.txt` file. It's used for all components as they are not standard npm packages.
-        *   `"component"`: A custom name used for creating clean Git tags (e.g., `payment-v1.0.0` instead of `services/payment-v1.0.0`).
-
-*   **`.release-please-manifest.json`**: This file acts as a database for `release-please`, storing the last released version for each component. The tool uses this file to determine which commits are new. It is automatically updated by `release-please`.
-
-*   **`.github/workflows/`**: This directory contains the GitHub Actions that drive the process.
-    *   `lint-pr-title.yml`: Ensures PR titles follow the Conventional Commits standard, which is crucial for the "squash merge" strategy.
-    *   `release-please-prepare.yml`: Manages the release preparation stage on the `dev` branch.
-    *   `release-please-finalize.yml`: Manages the release finalization stage on the `main` branch.
+### 3.2. Automated Release System (release-please)
 
 To automate versioning and release notes generation, this project uses Google's `release-please` tool. The system is built around a two-stage workflow that separates release preparation from finalization, providing a clear and auditable release process.
-
-### Goal
-1.  **Automate Version Bumping:** Automatically determine the next semantic version for each component based on Conventional Commits.
-2.  **Generate Changelogs:** Create and maintain `CHANGELOG.md` files for each component.
-3.  **Streamline Releases:** Automate the creation of Git tags and GitHub Releases.
-
-### One-Time Setup
-
-Before the system can operate, the following settings must be configured in the repository:
-
-1.  **Enable Workflow Permissions:**
-    *   **Path:** `Settings > Actions > General`.
-    *   **Action:** In the `Workflow permissions` section, select `Read and write permissions`.
-    *   **Crucial Step:** Check the box labeled **`Allow GitHub Actions to create and approve pull requests`**.
-    *   **Reason:** This permission is required for the `release-please` action to create Release PRs on behalf of the `github-actions[bot]`. Without it, the workflow will fail with a permissions error.
-
-2.  **Merging Initial CI/CD Workflows (The "Chicken and Egg" Problem):**
-    *   **Problem:** To merge a PR into a protected branch (e.g., `dev`), it must pass the `Check PR Title` status check. However, the workflow file that *runs* this check (`lint-pr-title.yml`) only exists within the PR itself and is not yet in the target branch. GitHub cannot run a workflow that it doesn't know about yet.
-    *   **Solution:** To merge the very first PR that introduces the CI/CD workflows, you must temporarily disable the required status check.
-        1.  Go to `Settings > Branches > Rulesets` and edit the ruleset for `dev`.
-        2.  Temporarily remove `Check PR Title` from the list of required status checks and save.
-        3.  Merge the Pull Request.
-        4.  **Immediately** go back and re-add `Check PR Title` to the required status checks. This one-time action bootstraps the system.
-
-### The Release Workflow: A Two-Stage Process
-
-The process is divided into two automated stages, managed by separate GitHub Actions workflows.
 
 #### Stage 1: Release Preparation (The "Release PR")
 
 This is the primary output of the preparation stage.
 
-*   **What it is:** An automatically generated Pull Request created by the `release-please-prepare.yml` workflow.
-*   **Trigger:** A push to the `dev` branch.
-*   **Title Format:** The PR title is configured via `pull-request-title-pattern` in `release-please-config.json` and follows the format: `chore(release): prepare release ${version}` (e.g., `chore(release): prepare release 1.1.0`).
-*   **Content:**
-    1.  **`CHANGELOG.md`:** An auto-generated summary of all `feat`, `fix`, and `perf` commits merged into `dev` since the last release. It includes links to commits and contributors.
-    2.  **`release-please-manifest.json`:** An update to the version numbers for all components that have changed.
-*   **Purpose:** This PR serves as a "staging area" for the next release. The team can review the upcoming changes and version bumps before they are finalized.
-*   **Action Required:** A developer must review and **merge** this PR into `dev`.
-*   **Automatic Updates:** If other PRs are merged into `dev` while the Release PR is open, `release-please` will automatically update its PR to include the new changes, ensuring it's always up-to-date with the `dev` branch.
+*  **What it is:** An automatically generated Pull Request created by the `release-please-prepare.yml` workflow.
+*  **Trigger:** A push to the `main` branch (typically after a `stg -> main` merge).
+*  **Action:** The workflow runs `release-please` which analyzes new commits since the last release.
+*  **Automatic Updates:** If other PRs are merged into `main` while the Release PR is open, `release-please` will automatically update its PR to include the new changes, ensuring it's always up-to-date with the `main` branch.
+*  **Result (The "Release PR"):**
+  1. **`CHANGELOG.md`:** An auto-generated summary of all `feat`, `fix`, and `perf` commits.
+  2. **`release-please-manifest.json`:** An update to the version numbers for all changed components.
+*  **Purpose:** This PR serves as a "staging area" for the next release. The team can review the upcoming changes and version bumps before they are finalized.
+*  **Action Required:** A developer must review and **merge** this PR into `main`.
 
 #### Stage 2: Release Finalization (Git Tags & GitHub Releases)
 
 This is the final output of the entire process.
 
-*   **What it is:** Official Git tags and GitHub Release entries.
-*   **Trigger:** Merging code from `dev` into `main` (via the `stg` branch), which contains the commits from a merged "Release PR".
-*   **Action:** The `release-please-finalize.yml` workflow runs.
-*   **Result:**
-    1.  **Git Tags:** For each component updated in the manifest, a corresponding Git tag is created (e.g., `project-v1.1.0`).
-    2.  **GitHub Releases:** A corresponding GitHub Release is published with the `CHANGELOG.md` notes for that version.
-*   **Purpose:** To create immutable, point-in-time references for each released version, providing a clean and official release history.
-*   **Action Required:** None. This stage is fully automated.
+*  **Trigger:** Merging the "Release PR" into the `main` branch.
+*  **Action:** This second push to `main` triggers the `release-please-finalize.yml` workflow.
+*  **Result:**
+  1. **Git Tags:** For each component updated in the manifest, a corresponding, component-specific Git tag is created (e.g., `payment-v2.1.0`).
+  2. **GitHub Releases:** A corresponding GitHub Release is published with the `CHANGELOG.md` notes for that version.
+*  **Purpose:** To create immutable, point-in-time references for each released version, providing a clean and official release history.
+*  **Action Required:** None. This stage is fully automated.
 
-### Configuration Files
+#### Configuration Files Overview
 
-The system is configured via the following files:
+The system is configured via the following files in the repository root:
+*  `release-please-config.json`: The main configuration file. It defines all trackable components and their specific release rules (e.g., `bump-minor-pre-major: true` for pre-1.0.0 versions, `"component"` for clean Git tags).
+*  `release-please-manifest.json`: This file acts as a database for `release-please`, storing the last released version for each component. It is updated automatically.
+*  `.github/workflows/`: This directory contains the GitHub Actions workflows (`prepare`, `finalize`, `lint-pr-title`) that drive the process.
 
-*   **`release-please-config.json` & `release-please-manifest.json`**: Define the monorepo components and track their versions.
-*   **`.github/workflows/`**:
-    *   `lint-pr-title.yml`: Enforces Conventional Commits on PR titles.
-    *   `release-please-prepare.yml`: Manages the "Release PR" creation (Stage 1).
-    *   `release-please-finalize.yml`: Manages Git tags and GitHub Releases (Stage 2).
-    
+### 3.3. Special Process: Hotfixes
+
+A hotfix is a critical patch that must be deployed to production as quickly as possible, bypassing the standard `dev -> stg` flow.
+
+**The Hotfix Workflow:**
+
+1. **Create Branch:** Branch directly from the `main` branch.
+  ```bash
+  git checkout main && git pull
+  git checkout -b hotfix/fix-critical-bug
+  ```
+2. **Commit Fix:** Make the necessary changes and create a commit using the Conventional Commits standard.
+  ```
+  fix(payment)!: Correct a critical double-charging vulnerability.
+  ```
+3. **Pull Request:** Open a Pull Request targeting the `main` branch.
+4. **Expedited Review:** The PR must be reviewed and approved with the highest priority.
+5. **Merge & Release:** Merge the PR into `main`. This will trigger the standard `release-please` finalization process, which will automatically create the new hotfix tag and release (e.g., `payment-v2.0.1`). The release is then deployed.
+6. **CRITICAL - Synchronize Downstream:** Immediately after the hotfix is released, `main` **MUST** be merged back into `stg` and `dev` to ensure the fix is incorporated into all active development lines.
+  ```bash
+  git checkout stg && git pull && git merge main
+  git checkout dev && git pull && git merge main
+  ```
+  **REASON:** Failure to perform this step will lead to the bug reappearing in the next regular release and will break `release-please`'s version calculation.
+
+### 3.4. Special Process: The "Gatekeeper" (Future Enhancement)
+
+To provide an additional layer of technical enforcement for our branching strategy, a "Gatekeeper" workflow can be implemented.
+
+*  **Goal:** To programmatically prevent incorrect merges.
+*  **How it works:** A custom GitHub Action runs on every Pull Request, checking the source and target branch names.
+  *  It allows merges into `main` **only** from `stg` or `hotfix/*` branches.
+  *  It allows merges into `stg` **only** from the `dev` branch.
+*  **Result:** If a developer attempts to create a PR from a feature branch directly into `main`, this check will fail, and GitHub will block the merge button. This turns our process "agreement" into a technical "law".
+
+### 3.5. System Architecture Diagram
+
+The following diagram illustrates the complete workflow, including branching, status checks, and the two-phase release process.
+
+![alt text](image.png)
+
+```mermaid
+graph TD
+  subgraph "Development Phase"
+    A[Feature Branch] -- "1. PR to dev" --> B(dev);
+    B -- "PR Passes Lint Check" --> B;
+  end
+
+  subgraph "Staging Phase"
+    B -- "2. PR to stg" --> C(stg);
+  end
+
+  subgraph "Release Phase"
+    C -- "3. PR to main" --> D{main};
+    D -- "4. Push triggers 'Prepare' workflow" --> E[release-please-prepare];
+    E -- "5. Creates/updates" --> F(Release PR);
+    F -- "6. Merge to main" --> D;
+    D -- "7. Push triggers 'Finalize' workflow" --> G[release-please-finalize];
+    G -- "8. Creates" --> H[Git Tags & GitHub Releases];
+  end
+
+  subgraph "Hotfix Path (Emergency)"
+    D -- "Create Branch" --> I[hotfix/*];
+    I -- "PR to main" --> D;
+  end
+
+  style B fill:#f9f,stroke:#333,stroke-width:2px
+  style C fill:#ccf,stroke:#333,stroke-width:2px
+  style D fill:#cfc,stroke:#333,stroke-width:4px
+```
+
+### One-Time Setup for CI/CD
+
+When introducing these CI/CD workflows into a new repository (or a branch for the first time), you will encounter a "chicken and egg" problem.
+
+*  **The Problem:** To merge a PR into a protected branch (e.g., `dev`), it must pass the `Check PR Title` status check. However, the workflow file that *runs* this check (`lint-pr-title.yml`) only exists within the PR itself and is not yet in the target branch. GitHub cannot run a workflow that it doesn't know about yet.
+*  **The Solution:** To merge the very first PR that introduces the CI/CD files, you must temporarily disable the required status check for that single merge.
+
+**Step-by-step instructions:**
+1. Go to `Settings > Branches > Rulesets` and edit the ruleset for `dev`.
+2. Temporarily remove `Check PR Title` from the list of required status checks and save.
+3. Merge the Pull Request containing the new CI/CD files.
+4. **Immediately** go back to the `dev` ruleset and re-add `Check PR Title` to the list of required status checks.
+
+This one-time action bootstraps the entire system, and all subsequent PRs will be correctly validated.
+</details>

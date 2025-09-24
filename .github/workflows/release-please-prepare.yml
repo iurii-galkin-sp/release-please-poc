@@ -1,36 +1,86 @@
-# REASON: This workflow implements the "preparation" stage of our release process.
-# It runs on every push to 'dev' to create or update a Release Pull Request.
+# ------------------------------------------------------------------------------
+# WORKFLOW PURPOSE:
+# This workflow implements the "preparation" stage of our two-phase release process.
+# Its sole responsibility is to create or update a "Release Pull Request".
+# This PR acts as a staging area, allowing the team to review all upcoming
+# version bumps and changelogs before they are finalized.
+# ------------------------------------------------------------------------------
 name: '1. Release Please - Prepare'
 
+
+# ------------------------------------------------------------------------------
+# TRIGGER CONFIGURATION:
+# This workflow is configured to run on every push event to the 'main' branch.
+#
+# MOTIVATION: In our 'main <- stg <- dev' flow, a push to 'main' signifies that
+# a new batch of stabilized code is ready to become a release candidate. This is
+# the perfect moment to start preparing the release.
+# ------------------------------------------------------------------------------
 on:
   push:
     branches:
-      - dev
+      - main
 
+
+# ------------------------------------------------------------------------------
+# PERMISSIONS:
+# This section grants the necessary permissions to the GITHUB_TOKEN that the
+# workflow uses to interact with the repository.
+#
+# MOTIVATION: Explicitly defining permissions is a security best practice.
+# It adheres to the principle of least privilege.
+# ------------------------------------------------------------------------------
 permissions:
+  # 'contents: write' is required for the action to commit file changes
+  # (e.g., CHANGELOG.md, release-please-manifest.json) to the release-please branch.
   contents: write
+
+  # 'pull-requests: write' is required for the action to create and update
+  # the main "Release PR" itself.
   pull-requests: write
 
+
 jobs:
+  # ----------------------------------------------------------------------------
+  # JOB: release-please-pr
+  # This is the only job in this workflow. Its purpose is to run the
+  # release-please action in "PR preparation" mode.
+  # ----------------------------------------------------------------------------
   release-please-pr:
     name: 'Create/Update Release PR'
+    # Specifies the virtual environment for the job. 'ubuntu-latest' is a
+    # cost-effective and widely used standard.
     runs-on: ubuntu-latest
-    steps:
-      # REASON: This step checks out the repository code, so that release-please
-      # can access the configuration files. It is a mandatory prerequisite.
-      - uses: actions/checkout@v4
 
+    steps:
+      # ------------------------------------------------------------------------
+      # STEP 1: Checkout Code
+      # MOTIVATION: This is a mandatory prerequisite. The release-please action
+      # must read the repository's configuration files to understand how to
+      # process the monorepo.
+      # ------------------------------------------------------------------------
+      - name: 'Checkout repository code'
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------------
+      # STEP 2: Run Release Please
+      # This is the core step of the workflow.
+      # ------------------------------------------------------------------------
       - name: 'Run Release Please to prepare a Release PR'
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          # REASON: We explicitly tell the action that for this workflow, the target
-          # branch is 'dev'. It will look for config files and create the PR against 'dev'.
-          target-branch: dev
-          # REASON: This flag instructs the action to ONLY create/update a Pull Request.
-          # It skips the final release creation step, which is handled by the finalize workflow.
+          # MOTIVATION: This flag is the key to implementing the "preparation" stage.
+          # According to the v4 documentation, setting this to 'true' instructs the
+          # action to perform ONLY the Pull Request creation/update logic.
+          # It will NOT create any Git tags or GitHub Releases.
           skip-github-release: true
-          # REASON: These inputs point to our manifest-based monorepo configuration.
+          
+          # MOTIVATION: These inputs point to our manifest-based monorepo configuration,
+          # which is the correct approach for projects with multiple components.
           config-file: release-please-config.json
           manifest-file: release-please-manifest.json
+          
+          # MOTIVATION: The GITHUB_TOKEN is required for the action to authenticate
+          # with the GitHub API to perform its tasks (e.g., creating the PR).
           token: ${{ secrets.GITHUB_TOKEN }}
