@@ -247,9 +247,15 @@ This is the final output of the entire process.
 #### Configuration Files Overview
 
 The system is configured via the following files in the repository root:
-*  `release-please-config.json`: The main configuration file. It defines all trackable components and their specific release rules (e.g., `bump-minor-pre-major: true` for pre-1.0.0 versions, `"component"` for clean Git tags).
-*  `release-please-manifest.json`: This file acts as a database for `release-please`, storing the last released version for each component. It is updated automatically.
-*  `.github/workflows/`: This directory contains the GitHub Actions workflows (`prepare`, `finalize`, `lint-pr-title`) that drive the process.
+
+*   **`release-please-config.json` & `release-please-manifest.json`**: These two files define the components of the monorepo and track their current versions. They are the "brain" of the release process.
+
+*   **`.github/workflows/`**: This directory contains the GitHub Actions that drive the process:
+    *   **`lint-pr-title.yml`**: This workflow runs on every Pull Request to enforce the Conventional Commits standard on PR titles, which is crucial for our "Squash and merge" strategy into the `dev` branch.
+    *   **`release-please.yml`**: This is the main, intelligent workflow that manages the entire two-phase release process. It runs on every push to `main` and uses conditional logic (`if` statements) to decide which stage to execute:
+        *   **Preparation Stage:** For any standard push, it runs a job to create or update the "Release PR".
+        *   **Finalization Stage:** If the push is a result of merging a "Release PR", it runs a different job to create the final Git tags and GitHub Releases.
+        This single-file approach prevents race conditions and resolves known issues with status checks on bot-created Pull Requests.
 
 ### 3.3. Special Process: Hotfixes
 
