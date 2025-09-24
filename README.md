@@ -106,9 +106,13 @@ We use a permanent, multi-stage branching model. Code flows in one direction, fr
 
 ### 2.2. Feature Lifecycle (Developer's Guide)
 
-This is the step-by-step process to get your work from an idea to a merged feature.
+This is the step-by-step process to get your work from an idea to a merged feature. It defines our branching strategy and merge procedures.
 
-**Step 1: Create a Feature Branch**
+#### **Branching Flow:** `feature/*` -> `dev` -> `stg` -> `main`
+
+---
+
+#### **Step 1: Create a Feature Branch**
 Always start by creating a new branch from the latest version of `dev`.
 ```bash
 git checkout dev
@@ -116,19 +120,55 @@ git pull
 git checkout -b feature/my-new-feature
 ```
 
-**Step 2: Develop and Commit**
+---
+
+#### **Step 2: Develop and Commit**
 Do your work on the feature branch. Create small, logical commits. Remember to follow the **Conventional Commits** standard for every commit message.
 
-**Step 3: Create a Pull Request**
+---
+
+#### **Step 3: Create a Pull Request to `dev`**
 When your feature is complete, push your branch to the repository and open a Pull Request (PR) targeting the `dev` branch.
 
 **The title of your Pull Request MUST also follow the Conventional Commits standard.** This is critical because this title will become the final commit message after squashing.
 
-**Step 4: Code Review and Status Checks**
-Your PR will automatically trigger several status checks, including a check of the PR title. It must be approved by at least one other team member and all status checks must pass before it can be merged.
+---
 
-**Step 5: Merge to `dev`**
-Merge your PR into `dev` using the **"Squash and merge"** strategy. This collapses all your feature commits into a single, clean commit on the `dev` branch.
+#### **Step 4: Code Review and Merge to `dev`**
+Your PR will automatically trigger several status checks. It must be approved by at least one other team member and all status checks must pass.
+
+*  **Merge Strategy:** Use **"Squash and merge"**. This collapses all your feature commits into a single, clean commit on the `dev` branch.
+
+---
+
+#### **Step 5 (for Release Managers): Promote to Staging (`stg`)**
+Once a set of features in `dev` is ready for regression testing, a Release Manager creates a Pull Request from `dev` into `stg`.
+
+*  **Merge Strategy:** Use **"Create a merge commit"**.
+*  **Action Required: Set Commit Message to Suppress Noise**
+  When merging, you **MUST** edit the commit message to use the `chore(release)` format. This is a critical step to prevent merge commits from "polluting" the final changelog.
+  ```
+  chore(release): Promote dev to stg
+  ```
+---
+
+#### **Step 6 (for Release Managers): Promote to Production (`main`)**
+After successful testing on `stg`, a Pull Request is created from `stg` into `main`.
+
+*  **Merge Strategy:** Use **"Create a merge commit"**.
+*  **Action Required: Set Commit Message to Suppress Noise**
+  Use the same `chore(release)` format for the merge commit message.
+  ```
+  chore(release): Promote stg to main
+  ```
+---
+
+#### **Step 7: Automation Takes Over (`release-please`)**
+Once the merge commit from `stg` lands in `main`, our automated release system takes over. You do not need to take any further action.
+1. The `release-please` workflow triggers.
+2. It analyzes all the underlying `feat`, `fix`, and `perf` commits that were promoted (it will correctly ignore the `chore(release)` commits).
+3. It automatically creates a new **"Release PR"**. This PR will contain the updated version numbers and a generated `CHANGELOG.md`.
+4. After this Release PR is reviewed and merged, the system will automatically create the final Git tags and GitHub Releases.ch.
 
 **Step 6: What Happens Next? (Automation Takes Over)**
 Once your PR is merged into `dev`, your work is officially part of the next release cycle. The automated system will eventually pick up your changes, include them in a "Release PR", and they will proceed through `stg` to `main` according to the release schedule. You do not need to take any further action.

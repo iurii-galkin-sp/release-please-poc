@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     # MOTIVATION: This 'if' condition is the core of our new logic.
     # It prevents this job from running when the push is a merge of a Release PR.
-    # The default title of a release PR follows the pattern 'chore(main): release vX.Y.Z'.
+    # The default title of a release PR follows the pattern 'chore(release): prepare new release'.
     # This check prevents a race condition with the 'finalize-release' job.
-    if: "!contains(github.event.head_commit.message, 'chore(main): release')"
+    if: "!contains(github.event.head_commit.message, 'chore(release): prepare new release')"
 
     steps:
       - name: 'Run Release Please to prepare a Pull Request'
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     # MOTIVATION: This 'if' condition ensures this job ONLY runs after a
     # release PR has been merged, acting as the trigger for the finalization stage.
-    if: "contains(github.event.head_commit.message, 'chore(main): release')"
+    if: "contains(github.event.head_commit.message, 'chore(release): prepare new release')"
 
     steps:
       - name: 'Run Release Please to create GitHub Releases and Tags'
