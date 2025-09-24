@@ -1,5 +1,5 @@
 {
-  ".": "1.0.0",
+  ".": "1.1.0",
   "services/activity": "1.0.0",
   "services/payment": "2.0.1",
   "services/resources/database/activity/schema": "2.0.0",
