@@ -1,47 +1,75 @@
-# REASON: This workflow implements the "finalization" stage of our release process.
-# It runs on every push to 'main' to create Git tags and GitHub Releases.
+# ------------------------------------------------------------------------------
+# WORKFLOW PURPOSE:
+# This workflow implements the "finalization" stage of our two-phase release process.
+# Its responsibility is to detect a merged "Release PR" and, based on it,
+# create the official Git tags and GitHub Releases for each component.
+# ------------------------------------------------------------------------------
 name: '2. Release Please - Finalize'
 
+
+# ------------------------------------------------------------------------------
+# TRIGGER CONFIGURATION:
+# This workflow also runs on every push to 'main'.
+#
+# MOTIVATION: The action's internal logic will differentiate between a regular
+# push and a push resulting from a merged Release PR. It will only act on the latter,
+# making this trigger safe and idempotent.
+# ------------------------------------------------------------------------------
 on:
   push:
     branches:
       - main
 
+
+# ------------------------------------------------------------------------------
+# PERMISSIONS:
+# Permissions are identical to the 'prepare' workflow.
+# MOTIVATION: The action needs 'contents: write' to create Git tags and
+# publish GitHub Releases.
+# ------------------------------------------------------------------------------
 permissions:
   contents: write
-  pull-requests: write
+  pull-requests: write # Though not strictly needed for this command, it's harmless.
+
 
 jobs:
+  # ----------------------------------------------------------------------------
+  # JOB: release-please-release
+  # This job runs the release-please action in "release finalization" mode.
+  # ----------------------------------------------------------------------------
   release-please-release:
     name: 'Create Git Tags and GitHub Releases'
     runs-on: ubuntu-latest
-    outputs:
-      releases_created: ${{ steps.release.outputs.releases_created }}
-
+    
     steps:
-      # REASON: This step checks out the repository code, so that release-please
-      # can access the configuration files. It is a mandatory prerequisite.
-      - uses: actions/checkout@v4
+      # ------------------------------------------------------------------------
+      # STEP 1: Checkout Code
+      # MOTIVATION: While this command primarily uses the GitHub API, checking
+      # out the code ensures it has access to the configuration files if needed
+      # for context. It is a safe and standard practice.
+      # ------------------------------------------------------------------------
+      - name: 'Checkout repository code'
+        uses: actions/checkout@v4
 
+      # ------------------------------------------------------------------------
+      # STEP 2: Run Release Please
+      # This is the core step of the finalization workflow.
+      # ------------------------------------------------------------------------
       - name: 'Run Release Please to create releases'
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          # REASON: This flag instructs the action to ONLY create the GitHub release.
-          # It skips the PR creation step, as we are acting on an already-merged PR.
+          # MOTIVATION: This flag is the key to implementing the "finalization" stage.
+          # According to the v4 documentation, setting this to 'true' instructs the
+          # action to perform ONLY the release/tag creation logic.
+          # It will skip the Pull Request creation step.
           skip-github-pull-request: true
-          
-          # REASON: These inputs point to our manifest-based monorepo configuration.
+
+          # MOTIVATION: These inputs point to our manifest-based monorepo configuration,
+          # ensuring the action understands the project structure.
           config-file: release-please-config.json
           manifest-file: release-please-manifest.json
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-  # A downstream job that runs only if a release was actually created.
-  notify:
-    name: 'Notify on Release'
-    runs-on: ubuntu-latest
-    needs: release-please-release
-    if: ${{ needs.release-please-release.outputs.releases_created }}
-    steps:
-      - name: 'Send notification'
-        run: echo "A new release was successfully created."
+          # MOTIVATION: The GITHUB_TOKEN is required for the action to authenticate
+          # with the GitHub API to create tags and releases.
+          token: ${{ secrets.GITHUB_TOKEN }}
