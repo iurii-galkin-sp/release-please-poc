@@ -1,3 +1,5 @@
+[English](./README.md) | [Español](./README.es.md) | [Русский](./README.ru.md)
+
 # Release Please PoC: Automated Versioning System
 
 ## Executive Summary: The Business Value of Automation
@@ -22,6 +24,7 @@ We have implemented a robust, two-phase automated system built around industry-s
 3. **Complete Transparency & Auditability:** Every release is now automatically accompanied by a detailed changelog. This provides crystal-clear visibility for all stakeholders. Product managers can easily track feature delivery, and support teams can instantly see which bug fixes are included in a version. This creates a fully auditable release history.
 4. **Improved Developer Focus & Productivity:** Our engineers can now focus on their primary task—building great software—instead of being burdened by complex and error-prone release procedures. This boosts morale and allows us to innovate more effectively.
 
+---
 ## 1. Developer Quick Start
 
 This section contains everything a developer needs to know to start working on the project.
@@ -71,6 +74,7 @@ While the specification allows for many types, we primarily use the following:
 * `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc).
 * `test`: Adding missing tests or correcting existing tests.
 * `chore`: Other changes that don't modify `src` or `test` files.
+* `revert`: Reverts a previous commit.
 
 #### Impact on Versioning
 
@@ -78,6 +82,7 @@ The `type` of the commit directly determines how the version number will be incr
 * `feat` results in a **minor** version bump (e.g., `1.2.3` -> `1.3.0`).
 * `fix` or `perf` result in a **patch** version bump (e.g., `1.2.3` -> `1.2.4`).
 * A `!` after the type (e.g., `feat!`) or a `BREAKING CHANGE:` footer results in a **major** version bump (e.g., `1.2.3` -> `2.0.0`).
+* `revert` commits, by default, do not trigger a version bump.
 
 #### Project-Specific Rules
 
@@ -147,7 +152,6 @@ Once your changes land in the `main` branch via the promotion process, our autom
 A detailed explanation of this automation is available in the "System Architecture" section.
 
 ---
-
 ## 3. System Architecture (Advanced)
 
 <details>
@@ -158,7 +162,7 @@ A detailed explanation of this automation is available in the "System Architectu
 To enforce our workflow and prevent common errors, this repository uses GitHub's **Rulesets** feature, configured under **`Settings > Branches > Rulesets`**. This modern system provides technical guarantees for our development process. We have three active rulesets, each targeting a specific branch.
 
 #### Ruleset: `main` (Production Branch)
-**Objective:** Maximum stability and auditability. This branch is a direct reflection of our production environment.
+**Objective:** Maximum stability and auditability.
 
 | Rule | Configuration | REASON |
 | :--- | :--- | :--- |
@@ -206,8 +210,6 @@ When introducing these CI/CD workflows into a new repository for the first time,
  3. Merge the Pull Request containing the new CI/CD files.
  4. **Immediately** go back to the `dev` ruleset and re-add `Check PR Title` to the list of required status checks.
 
-This one-time action bootstraps the entire system.
-
 ### 3.2. Automated Release System (`release-please`)
 
 To automate versioning and release notes generation, this project uses Google's `release-please` tool. The system is built around an intelligent, two-phase workflow managed by a single GitHub Actions file (`release-please.yml`).
@@ -230,6 +232,19 @@ This stage is triggered by the merge of the "Release PR" into the `main` branch.
   2. **GitHub Releases:** A corresponding GitHub Release for each tag, populated with notes from the `CHANGELOG.md`.
 *  **Action Required:** None. This stage is fully automated.
 
+#### Post-Release: CRITICAL - Synchronize `dev` Branch
+
+After a release is successfully created on `main`, the `main` branch now contains changes (like the updated `CHANGELOG.md`) that are not present in `dev`. To prevent future merge conflicts and ensure `dev` contains all production code, `main` **MUST** be merged back into `dev`.
+
+**Required Action (performed by Release Manager):**
+```bash
+git checkout dev
+git pull
+git merge main
+git push
+```
+This action must be performed via a Pull Request to comply with the branch protection rules for `dev`.
+
 ### 3.3. Special Process: Hotfixes
 
 A hotfix is a critical patch that must be deployed to production as quickly as possible, bypassing the standard `dev -> stg` flow.
@@ -239,7 +254,7 @@ A hotfix is a critical patch that must be deployed to production as quickly as p
 2. **Commit Fix:** Create a commit using the Conventional Commits standard (e.g., `fix(payment)!: Correct critical vulnerability`).
 3. **Pull Request:** Open a PR targeting the `main` branch.
 4. **Expedited Review & Merge:** After approval, merge the PR into `main`. This will trigger the `release-please` finalization process, creating the new hotfix tag and release.
-5. **CRITICAL - Synchronize Downstream:** Immediately after the hotfix is released, `main` **MUST** be merged back into `stg` and `dev` to ensure the fix is incorporated into all active development lines. Failure to do so will cause the bug to reappear in the next regular release.
+5. **CRITICAL - Synchronize Downstream:** Immediately after the hotfix is released, `main` **MUST** be merged back into `stg` and `dev` to ensure the fix is incorporated into all active development lines.
 
 ### 3.4. Special Process: The "Gatekeeper" (Future Enhancement)
 
@@ -248,6 +263,9 @@ To provide an additional layer of technical enforcement for our branching strate
 ### 3.5. System Architecture Diagram
 
 The following diagram illustrates the complete workflow.
+
+![alt text](image.png)
+
 ```mermaid
 graph TD
  subgraph "Development Phase"
@@ -289,6 +307,30 @@ graph TD
 2. **Grant Access:** Add this bot account as a collaborator to the repository with the **`Write`** role.
 3. **Generate a PAT:** Log in as the bot and generate a Personal Access Token (classic) with `repo` and `workflow` scopes.
 4. **Store the Secret:** Store this PAT in repository secrets as `RELEASE_PLEASE_POC_TOKEN`.
+
+### 3.7. Advanced Scenarios: Handling Rollbacks
+
+This section describes how the system behaves and provides recommended procedures for rolling back changes.
+
+#### Scenario: Rolling back a change with `git revert`
+
+This is the **safest, most transparent, and recommended** way to undo a change.
+
+*  **How it works:** `git revert` creates a new commit that undoes previous changes. Our system is configured to accept the `revert` type.
+*  **System Behavior:**
+  1. **Versioning:** A `revert` commit **does not bump the version number**.
+  2. **Changelog:** The revert action **will be recorded** in the `CHANGELOG.md` under a special "Reverts" section, ensuring full transparency.
+*  **Required Action:**
+  1. Run `git revert <commit_hash>`.
+  2. Edit the commit message to conform to the `revert(<scope>): <subject>` format. Example:
+    ```
+    revert(payment): feat(payment): add broken feature
+    ```
+*  **Trust and Code Review:** The automation system trusts the commit message. It does not verify that the code changes actually correspond to a revert. It is the **responsibility of the code reviewers** to ensure that a commit marked as `revert` does not contain new features or unrelated changes.
+
+#### Prohibited Action: `git reset --force`
+
+**NEVER** use `git reset` with a force push on shared branches (`dev`, `stg`, `main`). Our Branch Protection Rulesets are configured to block this dangerous action.
 
 </details>
 
