@@ -54,3 +54,8 @@ jobs:
           
           # Optional: Custom error message for the subject pattern.
           subjectPatternError: "The subject of the PR title must not be empty."
+          
+          # CRITICAL FIX: Enforce the presence of a scope.
+          # This parameter makes the scope mandatory, aligning the server-side check
+          # with our local commitlint rules. Defaults to 'false' if not specified.
+          requireScope: true
