@@ -51,7 +51,7 @@ jobs:
     # MOTIVATION: This 'if' condition ensures this job ONLY runs after a
     # release PR has been merged, acting as the trigger for the finalization stage.
     # The string MUST match the 'group-pull-request-title-pattern' from the config.
-    if: "contains(github.event.head_commit.message, 'chore(release): prepare new release')"
+    if: "startsWith(github.event.head_commit.message, 'chore(release): prepare new release')"
 
     steps:
       - name: 'Run Release Please to create GitHub Releases and Tags'
